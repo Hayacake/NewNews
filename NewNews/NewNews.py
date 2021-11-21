@@ -8,7 +8,10 @@ import json, datetime
 
 
 
-# TODO: テストデータを引っ張ってきてそれをGUIにリスト形式で表示する
+# TODO: リストの体裁を整える
+# TODO: リストのカラムを押したときにそのページを開く
+# TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
+# TODO: 気になるチェックを作る
 
 class WidgetsWindow:
     """widgetを並べたwindowクラス"""
