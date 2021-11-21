@@ -1,17 +1,20 @@
 #! /usr/bin/python3
 # NewNews.py - サーバからデータをダウンロードして表示する
 
+from os import pardir
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, datetime
+import json, datetime, webbrowser
+from typing import List, Dict
 
 
 
 
 # TODO: リストの体裁を整える
-# TODO: リストのカラムを押したときにそのページを開く
 # TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
 # TODO: 気になるチェックを作る
+
+
 
 class WidgetsWindow:
     """widgetを並べたwindowクラス"""
@@ -35,6 +38,9 @@ class WidgetsWindow:
         # レコードの追加
         self.load_file()
 
+        self.tree.tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
+        self.tree.tag_bind("item", "<Return>", self.event_open_url)
+
         # 描画する
         self.tree.pack(expand=True, fill=tk.BOTH, padx=15, pady=15)
     
@@ -43,9 +49,28 @@ class WidgetsWindow:
         # ファイルを読み込む
         # NOTE: これはテスト用のデータ
         newsData = json.load(open("NewNews/lib/data/qiitaNewItems.json"))
+
+        # URLを開くためにid: URLのペアを作る
+        self.idUrlPair: Dict[str, str] = {}
+
         for item in newsData:
             date = datetime.datetime.fromisoformat(item["date"])
-            self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")))
+            id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+            # ペアを格納
+            self.idUrlPair[id] = item["url"]   
+    
+
+    def event_open_url(self, event):
+        print(str(event.type))
+        if event.type == "4":
+            select = self.tree.identify_row(event.y)
+            webbrowser.open(self.idUrlPair[select])
+        elif event.type == "2":
+            select = self.tree.focus()
+            webbrowser.open(self.idUrlPair[select])
+        
+    
+    
 
 
 
