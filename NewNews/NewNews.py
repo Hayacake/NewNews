@@ -1,11 +1,10 @@
 #! /usr/bin/python3
 # NewNews.py - サーバからデータをダウンロードして表示する
 
-from os import pardir
 import tkinter as tk
 import tkinter.ttk as ttk
 import json, datetime, webbrowser
-from typing import List, Dict
+from typing import Dict
 
 
 
@@ -19,10 +18,13 @@ from typing import List, Dict
 class WidgetsWindow:
     """widgetを並べたwindowクラス"""
     def __init__(self, root: tk.Tk) -> None:
+        self.root = root
+
+
         # Pack形式で積んでいく(gridにしたい)
         # リスト
         self.column = ('Title', 'Tags', 'Date')
-        self.tree = ttk.Treeview(root, columns=self.column)
+        self.tree = ttk.Treeview(self.root, columns=self.column)
 
         # 列の設定
         self.tree.column('#0',width=0, stretch='no')
@@ -38,12 +40,21 @@ class WidgetsWindow:
         # レコードの追加
         self.load_file()
 
+        # イベントの追加
         self.tree.tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
         self.tree.tag_bind("item", "<Return>", self.event_open_url)
 
+
+        # スクロールバー
+        scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscroll=scrollbar.set)
+
+
         # 描画する
-        self.tree.pack(expand=True, fill=tk.BOTH, padx=15, pady=15)
+        self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=15)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
     
+
 
     def load_file(self) -> None:
         # ファイルを読み込む
@@ -59,6 +70,7 @@ class WidgetsWindow:
             # ペアを格納
             self.idUrlPair[id] = item["url"]   
     
+
 
     def event_open_url(self, event):
         print(str(event.type))
