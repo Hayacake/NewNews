@@ -11,7 +11,7 @@ BUFFER_SIZE = 4096
 
 
 
-def get_data_from_server() -> str:
+def get_data_from_server() -> List[Dict]:
     """サーバからデータを取得する"""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         # サーバーからのデータを受信

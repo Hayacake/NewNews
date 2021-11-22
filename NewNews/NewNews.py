@@ -7,6 +7,8 @@ import tkinter.ttk as ttk
 import json, datetime, webbrowser, os
 from typing import Dict, List
 
+from getDataFromServer import get_data_from_server
+
 PGMFILE = os.path.dirname(__file__)
 
 # TODO: リストの体裁を整える
@@ -73,14 +75,13 @@ class WidgetsWindow:
 
     def load_file(self, favData: List[Dict]) -> None:
         # ファイルを読み込む
-        # NOTE: これはテスト用のデータ。本番はサーバとの通信プログラム兼最新情報取得プログラムをインポートする
         # TODO: 非同期処理で最新の情報を手に入れる
-        newsData = json.load(open("NewNews/lib/data/testdata/qiitaNewItems.json"))
+        newsData = get_data_from_server()
 
         # お気に入りのタイトルリスト
         listFavTitle = [item["title"] for item in favData]
 
-        # URLを開くためにid: URLのペアを作る
+        # URLを開くために{id: URL, user: user情報}のペアを作る
         self.idUrlPair: Dict[str, str] = {}
 
         for item in newsData:
