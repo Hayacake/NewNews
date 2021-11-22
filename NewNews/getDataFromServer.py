@@ -5,7 +5,7 @@ import socket
 
 
 IP_ADDRESS = "133.242.175.169"
-PORT = "56747"
+PORT = 56747
 
 
 
