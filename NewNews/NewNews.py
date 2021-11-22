@@ -11,8 +11,6 @@ PGMFILE = os.path.dirname(__file__)
 
 # TODO: リストの体裁を整える
 # TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
-# TODO: 気になるチェックを作る
-
 
 
 class WidgetsWindow:
