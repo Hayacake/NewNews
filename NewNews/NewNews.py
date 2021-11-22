@@ -60,15 +60,15 @@ class WidgetsWindow:
 # ===============================================================================================
 
         # スクロールバー
-        scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
+        self.scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscroll=self.scrollbar.set)
 
 # ===============================================================================================
 
         # 描画する
         self.btnFav.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=10)
         self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=5)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
     
 
