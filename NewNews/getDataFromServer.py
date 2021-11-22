@@ -13,17 +13,18 @@ BUFFER_SIZE = 4096
 
 def get_data_from_server() -> str:
     """サーバからデータを取得する"""
-    fullData = b""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        # サーバーに接続を要求する
-        s.connect((IP_ADDRESS, PORT))
-        s.settimeout(180)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         # サーバーからのデータを受信
+        s.sendto(b"connection", (IP_ADDRESS, PORT))
+
+        # データを受信
+        fullData = b""
         while True:
-            data = s.recv(BUFFER_SIZE)
-            if len(data) <= 0:
+            data, addr = s.recvfrom(BUFFER_SIZE)
+            if data == b"finish":
                 break
             fullData += data
+            s.sendto(b"received", (IP_ADDRESS, PORT))
 
         return fullData
 

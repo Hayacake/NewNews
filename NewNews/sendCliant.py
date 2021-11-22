@@ -1,31 +1,43 @@
 #! /usr/bin/python3
 # sendCliant.py - send json data to cliant
 
-import socket, os, pickle, json
+import socket, os, pickle, json, time
 
 
 
 IP_ADDRESS = "133.242.175.169"
 PORT = 56747
-BUFFER_SIZE =  1048576
+BUFFER_SIZE =  4096
 DIRNAME = os.path.dirname(__file__)
 
 
-
 # Socketの作成
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     # IP Adress とPort番号をソケット割り当てる
     s.bind((IP_ADDRESS, PORT))
-    # Socketの待機状態
-    s.listen(5)
+
     # while Trueでクライアントからの要求を待つ
     while True:
         # 要求があれば接続の確立とアドレス、アドレスを代入
-        conn, addr = s.accept()
-        conn.settimeout(60)
-        
-        # JSONデータを読み込む
-        payload = json.load(open(DIRNAME + "/data/qiitaNewItems.json"))
-        pay = pickle.dumps(payload)
-        # データを送信する
-        conn.sendall(pay)
+        msg, addr = s.recvfrom(BUFFER_SIZE)
+        print(msg, addr)
+
+        data = json.load(open(DIRNAME + "/data/qiitaNewItems.json"))
+        data = pickle.dumps(data)
+
+        # 分割して送る
+        n = 0
+        print(len(data))
+        while True:
+            payload = data[n * 4000: (n + 1) * 4000]
+            print(f"{n} / {len(data) / 4000}: {payload}")
+            # 送るデータがなくなったと伝える
+            if payload == b"":
+                s.sendto(b"finish", addr)
+                print("fin")
+                break
+            s.sendto(payload, addr)
+            n += 1
+            # time.sleep(0.25)
+            d, a = s.recvfrom(BUFFER_SIZE); print(d)
+       
