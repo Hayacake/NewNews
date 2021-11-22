@@ -26,8 +26,8 @@ def get_data_from_server() -> str:
             fullData += data
             s.sendto(b"received", (IP_ADDRESS, PORT))
 
-        return fullData
+        return pickle.loads(fullData)
 
 
 if __name__ == "__main__":
-    print(pickle.loads(get_data_from_server()))
+    print(get_data_from_server())

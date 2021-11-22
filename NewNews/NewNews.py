@@ -118,10 +118,10 @@ class WidgetsWindow:
             # すでにお気に入り登録されているかのチェック
             if recordVal[0].startswith("⭐️ "):
                 self.tree.set(select, "Title", recordVal[0].lstrip("⭐️ "))
-                self.favData.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"]})
+                self.favData.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
             else:
                 self.tree.set(select, "Title", "⭐️ " + recordVal[0])
-                self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"]})
+                self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
             json.dump(self.favData, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=FALSE)
 
     

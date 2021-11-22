@@ -20,7 +20,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     while True:
         # 要求があれば接続の確立とアドレス、アドレスを代入
         msg, addr = s.recvfrom(BUFFER_SIZE)
-        print(msg, addr)
 
         data = json.load(open(DIRNAME + "/data/qiitaNewItems.json"))
         data = pickle.dumps(data)
@@ -30,14 +29,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         print(len(data))
         while True:
             payload = data[n * 4000: (n + 1) * 4000]
-            print(f"{n} / {len(data) / 4000}: {payload}")
             # 送るデータがなくなったと伝える
             if payload == b"":
                 s.sendto(b"finish", addr)
-                print("fin")
                 break
             s.sendto(payload, addr)
             n += 1
             # time.sleep(0.25)
-            d, a = s.recvfrom(BUFFER_SIZE); print(d)
+            d, a = s.recvfrom(BUFFER_SIZE)
        
