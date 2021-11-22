@@ -2,12 +2,12 @@
 # NewNews.py - サーバからデータをダウンロードして表示する
 
 import tkinter as tk
+from tkinter.constants import FALSE
 import tkinter.ttk as ttk
-import json, datetime, webbrowser
-from typing import Dict
+import json, datetime, webbrowser, os
+from typing import Dict, List
 
-
-
+PGMFILE = os.path.dirname(__file__)
 
 # TODO: リストの体裁を整える
 # TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
@@ -22,6 +22,17 @@ class WidgetsWindow:
 
 
         # Pack形式で積んでいく(gridにしたい)
+
+# ===============================================================================================
+
+        # お気に入りボタン
+        self.btnFav = ttk.Button(self.root, text="Favorite", command=self.push_button_fav)
+
+        # お気に入りデータの読み込み
+        self.favData = self.load_fav()
+
+# ===============================================================================================
+
         # リスト
         self.column = ('Title', 'Tags', 'Date')
         self.tree = ttk.Treeview(self.root, columns=self.column)
@@ -38,50 +49,83 @@ class WidgetsWindow:
         self.tree.heading('Date',text='Date', anchor='center')
 
         # レコードの追加
-        self.load_file()
+        self.load_file(self.favData)
+
 
         # イベントの追加
+        # URLオープンイベント
         self.tree.tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
         self.tree.tag_bind("item", "<Return>", self.event_open_url)
 
+# ===============================================================================================
 
         # スクロールバー
         scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscroll=scrollbar.set)
 
+# ===============================================================================================
 
         # 描画する
-        self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=15)
+        self.btnFav.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=10)
+        self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=5)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
     
 
 
-    def load_file(self) -> None:
+    def load_file(self, favData: List[Dict]) -> None:
         # ファイルを読み込む
-        # NOTE: これはテスト用のデータ
-        newsData = json.load(open("NewNews/lib/data/qiitaNewItems.json"))
+        # NOTE: これはテスト用のデータ。本番はサーバとの通信プログラム兼最新情報取得プログラムをインポートする
+        # TODO: 非同期処理で最新の情報を手に入れる
+        newsData = json.load(open("NewNews/lib/data/testdata/qiitaNewItems.json"))
+
+        # お気に入りのタイトルリスト
+        listFavTitle = [item["title"] for item in favData]
 
         # URLを開くためにid: URLのペアを作る
         self.idUrlPair: Dict[str, str] = {}
 
         for item in newsData:
             date = datetime.datetime.fromisoformat(item["date"])
-            id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+            if item["title"] not in listFavTitle:
+                id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+            else:
+                id = self.tree.insert(parent="", index="end", values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
             # ペアを格納
-            self.idUrlPair[id] = item["url"]   
+            self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+
     
+    
+    def load_fav(self) -> List[Dict]:
+        favData = json.load(open(PGMFILE + "/lib/data/usrfavorite.json"))
+        return favData
+
 
 
     def event_open_url(self, event):
-        print(str(event.type))
         if event.type == "4":
             select = self.tree.identify_row(event.y)
-            webbrowser.open(self.idUrlPair[select])
         elif event.type == "2":
             select = self.tree.focus()
-            webbrowser.open(self.idUrlPair[select])
-        
+        webbrowser.open(self.idUrlPair[select]["url"])
+
     
+
+    def push_button_fav(self) -> None:
+        select = self.tree.focus()
+        if select == "":
+            pass
+        else:
+            recordVal = self.tree.item(select, "values")
+            # すでにお気に入り登録されているかのチェック
+            if recordVal[0].startswith("⭐️ "):
+                print("すでにお気に入り登録されています")
+                self.tree.set(select, "Title", recordVal[0].lstrip("⭐️ "))
+            else:
+                self.tree.set(select, "Title", "⭐️ " + recordVal[0])
+                self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"]})
+                json.dump(self.favData, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=FALSE)
+
     
 
 
