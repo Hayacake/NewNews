@@ -2,7 +2,6 @@
 # NewNews.py - サーバからデータをダウンロードして表示する
 
 import tkinter as tk
-from tkinter.constants import FALSE
 import tkinter.ttk as ttk
 import json, datetime, webbrowser, os
 from typing import Dict, List
@@ -13,6 +12,7 @@ PGMFILE = os.path.dirname(__file__)
 
 # TODO: リストの体裁を整える
 # TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
+# TODO: ブックマーク機能
 
 
 class WidgetsWindow:
@@ -23,7 +23,7 @@ class WidgetsWindow:
 
         # Pack形式で積んでいく(gridにしたい)
 
-# ===============================================================================================
+        # ===============================================================================================
 
         # お気に入りボタン
         self.btnFav = ttk.Button(self.root, text="Favorite", command=self.push_button_fav)
@@ -31,7 +31,7 @@ class WidgetsWindow:
         # お気に入りデータの読み込み
         self.favData = self.load_fav()
 
-# ===============================================================================================
+        # ===============================================================================================
 
         # リスト
         self.column = ('Title', 'Tags', 'Date')
@@ -57,18 +57,19 @@ class WidgetsWindow:
         self.tree.tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
         self.tree.tag_bind("item", "<Return>", self.event_open_url)
 
-# ===============================================================================================
+        # ===============================================================================================
 
         # スクロールバー
         self.scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscroll=self.scrollbar.set)
 
-# ===============================================================================================
+        # ===============================================================================================
 
         # 描画する
         self.btnFav.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=10)
         self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=5)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # ===============================================================================================
         
     
 
@@ -123,7 +124,7 @@ class WidgetsWindow:
             else:
                 self.tree.set(select, "Title", "⭐️ " + recordVal[0])
                 self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
-            json.dump(self.favData, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=FALSE)
+            json.dump(self.favData, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=False)
 
     
 

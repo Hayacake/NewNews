@@ -1,5 +1,5 @@
 # data dir and log dir
-NewNews/lib/data/testdata
+NewNews/lib/data
 NewNews/logs
 NewNews/__pycache__
 
