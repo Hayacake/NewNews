@@ -13,6 +13,8 @@ PGMFILE = os.path.dirname(__file__)
 # TODO: リストの体裁を整える
 # TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
 # TODO: ブックマーク機能
+# TODO: 非同期処理で最新の情報を手に入れる
+# TODO: 現在表示されている情報を全て圧縮して保存する
 
 
 class WidgetsWindow:
@@ -76,7 +78,6 @@ class WidgetsWindow:
 
     def load_file(self, favData: List[Dict]) -> None:
         # ファイルを読み込む
-        # TODO: 非同期処理で最新の情報を手に入れる
         newsData = get_data_from_server()
 
         # お気に入りのタイトルリスト
