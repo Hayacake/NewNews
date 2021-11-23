@@ -51,7 +51,7 @@ class WidgetsWindow:
         self.tree.heading('Tags', text='Tags', anchor='w')
         self.tree.heading('Date',text='Date', anchor='center')
 
-        # レコードの追加
+        # ローカルからのレコードの追加
         self.load_file(self.favData)
 
 
@@ -79,7 +79,7 @@ class WidgetsWindow:
 
     def load_file(self, favData: List[Dict]) -> None:
         # ファイルを読み込む
-        newsData = get_data_from_server()
+        newsData = json.load(open(PGMFILE + "/lib/data/qiitaNewItems.json"))
 
         # お気に入りのタイトルリスト
         listFavTitle = [item["title"] for item in favData]
