@@ -15,7 +15,8 @@ PGMFILE = os.path.dirname(__file__)
 # TODO: ブックマーク機能
 # TODO: 非同期処理で最新の情報を手に入れる
 # TODO: 現在表示されている情報を全て圧縮して保存する
-    #TODO: 最初にサーバー, 最後に最新の順で情報を取得する
+    #TODO: 最初にローカルのデータを取り出す→サーバーのデータを取り出しJSONに保存する→最新情報を読み込んで、APIと同じようにして更新する→保存後表示する
+    #NOTE: dateを使えばローカルとサーバのどちらが最新かがわかるのでは？
 
 
 class WidgetsWindow:
@@ -54,6 +55,7 @@ class WidgetsWindow:
         # レコードの追加
         self.load_file(self.favData)
 
+        # 最新情報の取得(別スレッドで)
 
         # イベントの追加
         # URLオープンイベント
