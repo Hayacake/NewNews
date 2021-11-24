@@ -8,6 +8,7 @@ from typing import Dict, List
 
 from getDataFromServer import get_data_from_server
 
+
 PGMFILE = os.path.dirname(__file__)
 
 # TODO: リストの体裁を整える
@@ -52,10 +53,11 @@ class WidgetsWindow:
         self.tree.heading('Tags', text='Tags', anchor='w')
         self.tree.heading('Date',text='Date', anchor='center')
 
-        # レコードの追加
-        self.load_file(self.favData)
+        # ローカルからデータの追加
+        self.load_local_data(self.favData)
 
-        # 最新情報の取得(別スレッドで)
+        # サーバとローカルによるデータの更新+最新情報の取得(別スレッドで)
+
 
         # イベントの追加
         # URLオープンイベント
@@ -79,9 +81,9 @@ class WidgetsWindow:
     
 
 
-    def load_file(self, favData: List[Dict]) -> None:
+    def load_local_data(self, favData: List[Dict]) -> None:
         # ファイルを読み込む
-        newsData = get_data_from_server()
+        self.datLocal = json.load(open(PGMFILE + "/lib/data/Qiita.json"))
 
         # お気に入りのタイトルリスト
         listFavTitle = [item["title"] for item in favData]
@@ -89,7 +91,7 @@ class WidgetsWindow:
         # URLを開くために{id: URL, user: user情報}のペアを作る
         self.idUrlPair: Dict[str, str] = {}
 
-        for item in newsData:
+        for item in self.datLocal:
             date = datetime.datetime.fromisoformat(item["date"])
             if item["title"] not in listFavTitle:
                 id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
