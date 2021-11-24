@@ -15,7 +15,6 @@ PGMFILE = os.path.dirname(__file__)
 
 
 
-# TODO: 現在表示されている情報を全て圧縮して保存する
 # TODO: 前のデータを消す
 # TODO: 処理の状況を伝えるメッセージ
 # TODO: ブックマーク機能
@@ -190,7 +189,7 @@ class WidgetsWindow:
             self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
         
         # ローカルに保存する
-        
+        json.dump(self.dat, open(PGMFILE + "/lib/data/Qiita.json", "w"), indent=2, ensure_ascii=False)
 
 
     
@@ -232,7 +231,7 @@ class WidgetsWindow:
 
 def main():
     root = tk.Tk()
-    root.title("test for tkinter")
+    root.title("NewNews")
     root.geometry("1000x800")
     ww = WidgetsWindow(root)
     root.mainloop()
