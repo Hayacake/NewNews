@@ -6,6 +6,7 @@ import tkinter.ttk as ttk
 import json, datetime, webbrowser, os, threading, logging
 from typing import Dict, List
 
+from Qiita import get_new_items
 from getDataFromServer import get_data_from_server
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -15,8 +16,7 @@ PGMFILE = os.path.dirname(__file__)
 
 
 # TODO: 現在表示されている情報を全て圧縮して保存する
-    # TODO: 最初にローカルのデータを取り出す→サーバーのデータを取り出しJSONに保存する→最新情報を読み込んで、APIと同じようにして更新する→保存後表示する
-# TODO: 非同期処理で最新の情報を手に入れる
+# TODO: 前のデータを消す
 # TODO: 処理の状況を伝えるメッセージ
 # TODO: ブックマーク機能
 # TODO: リストの体裁を整える
@@ -62,8 +62,12 @@ class WidgetsWindow:
         self.load_local_data(self.favData)
 
         # サーバとローカルによるデータの更新+最新情報の取得(別スレッドで)
-        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, ))
+        self.is_server = threading.Event()
+        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, ), name="Server")
         thLoadingServer.start()
+
+        thLoadingNewest = threading.Thread(target=self.load_newest_data, args=(self.favData, ), name="Newest")
+        thLoadingNewest.start()
 
 
         # イベントの追加
@@ -89,6 +93,7 @@ class WidgetsWindow:
 
 
     def load_local_data(self, favData: List[Dict]) -> None:
+        """ローカルからファイルをロードする"""
         logging.info("start loading local file")
 
         # ファイルを読み込む
@@ -114,6 +119,7 @@ class WidgetsWindow:
 
 
     def load_server_data(self, favData: List[Dict]) -> None:
+        """サーバーからファイルをロードする"""
         logging.info("start loading server file")
 
         # ファイルを読み込む
@@ -121,15 +127,19 @@ class WidgetsWindow:
 
         if datetime.datetime.fromisoformat(self.dat[0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
             logging.info("local data is newest")
+            self.is_server.set()
             pass
         else:
+            # TODO: サーバーの情報を保存する
             logging.info("update to server data (local data is not newest)")
             self.dat = datServer
+
+            self.is_server.set()                        # 最新情報を動かす
+
             # お気に入りのリスト
             listFavTitle = [item["title"] for item in favData]
-
+            # リストに情報を入れていく
             for item in datServer[::-1]:
-                # TODO: サーバーの情報を保存する
                 date = datetime.datetime.fromisoformat(item["date"])
                 if item["title"] not in listFavTitle:
                     id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
@@ -139,6 +149,48 @@ class WidgetsWindow:
                 self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
         logging.info("success loading server file")
 
+
+
+    def load_newest_data(self, favData: List[Dict]) -> None:
+        """最新の情報をAPIから取得する"""
+        logging.info("start loading from web API")
+
+        # 最新の情報を取得する
+        datWeb = get_new_items()
+        self.is_server.wait()
+        logging.info("success getting newest")
+
+        # delete multify 
+        i = 0; deleteItems = []; listWebTitle = [article["title"] for article in datWeb]
+        for item in self.dat:
+            flag = 0
+            if item["title"] in listWebTitle:
+                deleteItems.append(item)
+                flag = 1
+                break
+            if flag == 0:
+                i += 1
+            if i > 5:
+                break
+        for i in deleteItems:
+            self.dat.remove(i)
+        
+        # データを作る
+        self.dat = datWeb + self.dat
+        listFavTitle = [item["title"] for item in favData]
+
+        # リストに表示する
+        for item in self.dat[::-1]:
+            date = datetime.datetime.fromisoformat(item["date"])
+            if item["title"] not in listFavTitle:
+                id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+            else:
+                id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+            # ペアを格納
+            self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+        
+        # ローカルに保存する
+        
 
 
     
@@ -191,3 +243,4 @@ if __name__ == "__main__":
     logging.info("start App")
     main()
     logging.info("stop App")
+    logging.info("===============================-")

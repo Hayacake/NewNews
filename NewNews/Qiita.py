@@ -14,6 +14,8 @@ def get_new_items(num_items: int = 100) -> typing.List[typing.Dict[str, typing.U
     # get JSON of new items
     res = requests.get(f"https://qiita.com/api/v2/items?page=1&per_page={num_items}")
     res.raise_for_status()
+
+    logging.info("done loading")
     contents = json.loads(res.text)
 
 
@@ -36,7 +38,7 @@ def get_new_items(num_items: int = 100) -> typing.List[typing.Dict[str, typing.U
 
 
 
-
+"""
 # get previous datas
 nowTime = datetime.datetime.now()
 prevItems: typing.List[typing.Dict] = json.load(open(f"{os.path.dirname(__file__)}/data/qiitaNewItems.json"))
@@ -84,3 +86,4 @@ json.dump(articles, open(f"{os.path.dirname(__file__)}/data/qiitaNewItems.json",
 
 
 # logging.info("end program")
+"""
