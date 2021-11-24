@@ -3,21 +3,26 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, datetime, webbrowser, os
+import json, datetime, webbrowser, os, threading, logging
 from typing import Dict, List
 
 from getDataFromServer import get_data_from_server
 
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 PGMFILE = os.path.dirname(__file__)
 
+
+
+# TODO: 現在表示されている情報を全て圧縮して保存する
+    # TODO: 最初にローカルのデータを取り出す→サーバーのデータを取り出しJSONに保存する→最新情報を読み込んで、APIと同じようにして更新する→保存後表示する
+# TODO: 非同期処理で最新の情報を手に入れる
+# TODO: 処理の状況を伝えるメッセージ
+# TODO: ブックマーク機能
 # TODO: リストの体裁を整える
 # TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
-# TODO: ブックマーク機能
-# TODO: 非同期処理で最新の情報を手に入れる
-# TODO: 現在表示されている情報を全て圧縮して保存する
-    #TODO: 最初にローカルのデータを取り出す→サーバーのデータを取り出しJSONに保存する→最新情報を読み込んで、APIと同じようにして更新する→保存後表示する
-    #NOTE: dateを使えばローカルとサーバのどちらが最新かがわかるのでは？
+
+
 
 
 class WidgetsWindow:
@@ -57,6 +62,8 @@ class WidgetsWindow:
         self.load_local_data(self.favData)
 
         # サーバとローカルによるデータの更新+最新情報の取得(別スレッドで)
+        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, ))
+        thLoadingServer.start()
 
 
         # イベントの追加
@@ -82,8 +89,11 @@ class WidgetsWindow:
 
 
     def load_local_data(self, favData: List[Dict]) -> None:
+        logging.info("start loading local file")
+
         # ファイルを読み込む
-        self.datLocal = json.load(open(PGMFILE + "/lib/data/Qiita.json"))
+        datLocal = json.load(open(PGMFILE + "/lib/data/Qiita.json"))
+        self.dat = datLocal
 
         # お気に入りのタイトルリスト
         listFavTitle = [item["title"] for item in favData]
@@ -91,7 +101,7 @@ class WidgetsWindow:
         # URLを開くために{id: URL, user: user情報}のペアを作る
         self.idUrlPair: Dict[str, str] = {}
 
-        for item in self.datLocal:
+        for item in datLocal:
             date = datetime.datetime.fromisoformat(item["date"])
             if item["title"] not in listFavTitle:
                 id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
@@ -99,6 +109,37 @@ class WidgetsWindow:
                 id = self.tree.insert(parent="", index="end", values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
             # ペアを格納
             self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+        logging.info("success loading local data")
+
+
+
+    def load_server_data(self, favData: List[Dict]) -> None:
+        logging.info("start loading server file")
+
+        # ファイルを読み込む
+        datServer = get_data_from_server()
+
+        if datetime.datetime.fromisoformat(self.dat[0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
+            logging.info("local data is newest")
+            pass
+        else:
+            logging.info("update to server data (local data is not newest)")
+            self.dat = datServer
+            # お気に入りのリスト
+            listFavTitle = [item["title"] for item in favData]
+
+            for item in datServer[::-1]:
+                # TODO: サーバーの情報を保存する
+                date = datetime.datetime.fromisoformat(item["date"])
+                if item["title"] not in listFavTitle:
+                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                else:
+                    id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                # ペアを格納
+                self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+        logging.info("success loading server file")
+
+
 
     
     
@@ -147,4 +188,6 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.info("start App")
     main()
+    logging.info("stop App")
