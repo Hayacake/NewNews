@@ -15,6 +15,7 @@ PGMFILE = os.path.dirname(__file__)
 
 
 
+# TODO: コードのクリーンアップ
 # TODO: 処理の状況を伝えるメッセージ
 # TODO: ブックマーク機能
 # TODO: リストの体裁を整える
