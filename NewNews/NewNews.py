@@ -9,13 +9,12 @@ from typing import Dict, List
 from Qiita import get_new_items
 from getDataFromServer import get_data_from_server
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(levelname)s - %(message)s")
 
 PGMFILE = os.path.dirname(__file__)
 
 
 
-# TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
 # TODO: 処理の状況を伝えるメッセージ
 # TODO: ブックマーク機能
 # TODO: リストの体裁を整える
@@ -71,6 +70,8 @@ class WidgetsWindow:
         thLoadingNewest = threading.Thread(target=self.load_newest_data, args=(self.favData, ), name="Newest")
         thLoadingNewest.start()
 
+        # 未読と既読を色分けする
+        self.tree.tag_configure("unread", background="#a0d8ef")
 
         # イベントの追加
         # URLオープンイベント
@@ -101,9 +102,11 @@ class WidgetsWindow:
         # ファイルを読み込む
         datLocal = json.load(open(PGMFILE + "/lib/data/Qiita.json"))
         self.dat = datLocal
+        print(datLocal)
 
         # お気に入りのタイトルリスト
         listFavTitle = [item["title"] for item in favData]
+        self.listRead = [item["title"] for item in datLocal if item.get("read", 0) == 1]
 
         for item in datLocal:
             date = datetime.datetime.fromisoformat(item["date"])
@@ -138,11 +141,22 @@ class WidgetsWindow:
             listFavTitle = [item["title"] for item in favData]
             # リストに情報を入れていく
             for item in datServer[::-1]:
+                item["read"] = 1
                 date = datetime.datetime.fromisoformat(item["date"])
                 if item["title"] not in listFavTitle:
-                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
+                    # お気に入りではないとき
+                    if item["title"] not in self.listRead:
+                        # 新着記事の時
+                        id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
+                    else:
+                        id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
                 else:
-                    id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
+                    # お気に入りの時
+                    if item["title"] not in self.listRead:
+                        # 新着記事の時
+                        id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
+                    else:
+                        id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
                 # ペアを格納
                 self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {}), "flagNew": 0}
         logging.info("success loading server file")
@@ -181,9 +195,19 @@ class WidgetsWindow:
         for item in self.dat[::-1]:
             date = datetime.datetime.fromisoformat(item["date"])
             if item["title"] not in listFavTitle:
-                id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item","new"])
+                # お気に入りではないとき
+                if item["title"] not in self.listRead:
+                    # 新着記事の時
+                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
+                else:
+                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             else:
-                id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item","new"])
+                # お気に入りの時
+                if item["title"] not in self.listRead:
+                    # 新着記事の時
+                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
+                else:
+                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             # ペアを格納
             self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {}), "flagNew": 1}
         

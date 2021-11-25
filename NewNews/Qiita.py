@@ -30,7 +30,8 @@ def get_new_items(num_items: int = 100) -> typing.List[typing.Dict[str, typing.U
             "user": {
                 "id": article["user"]["id"],
                 "name": article["user"]["name"]
-            }
+            },
+            "read": 1
             # NOTE: wanna make simple discription
         }
         articles.append(articleData)
