@@ -15,11 +15,10 @@ PGMFILE = os.path.dirname(__file__)
 
 
 
-# TODO: 前のデータを消す
+# TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
 # TODO: 処理の状況を伝えるメッセージ
 # TODO: ブックマーク機能
 # TODO: リストの体裁を整える
-# TODO: 未読既読の表示を行う(データをクライアントにとっておいて、サーバーと照合?)
 
 
 
@@ -56,6 +55,10 @@ class WidgetsWindow:
         self.tree.heading('Title', text='Title',anchor='center')
         self.tree.heading('Tags', text='Tags', anchor='w')
         self.tree.heading('Date',text='Date', anchor='center')
+
+
+        # URLを開くために{id: URL, user: user情報}のペアを作る
+        self.idUrlPair: Dict[str, str] = {}
 
         # ローカルからデータの追加
         self.load_local_data(self.favData)
@@ -102,17 +105,14 @@ class WidgetsWindow:
         # お気に入りのタイトルリスト
         listFavTitle = [item["title"] for item in favData]
 
-        # URLを開くために{id: URL, user: user情報}のペアを作る
-        self.idUrlPair: Dict[str, str] = {}
-
         for item in datLocal:
             date = datetime.datetime.fromisoformat(item["date"])
             if item["title"] not in listFavTitle:
-                id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                id = self.tree.insert(parent="", index="end", values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             else:
-                id = self.tree.insert(parent="", index="end", values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                id = self.tree.insert(parent="", index="end", values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             # ペアを格納
-            self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+            self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {}), "flagNew": 0}
         logging.info("success loading local data")
 
 
@@ -129,7 +129,6 @@ class WidgetsWindow:
             self.is_server.set()
             pass
         else:
-            # TODO: サーバーの情報を保存する
             logging.info("update to server data (local data is not newest)")
             self.dat = datServer
 
@@ -141,11 +140,11 @@ class WidgetsWindow:
             for item in datServer[::-1]:
                 date = datetime.datetime.fromisoformat(item["date"])
                 if item["title"] not in listFavTitle:
-                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                    id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
                 else:
-                    id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                    id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
                 # ペアを格納
-                self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+                self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {}), "flagNew": 0}
         logging.info("success loading server file")
 
 
@@ -166,13 +165,13 @@ class WidgetsWindow:
             if item["title"] in listWebTitle:
                 deleteItems.append(item)
                 flag = 1
-                break
             if flag == 0:
                 i += 1
             if i > 5:
                 break
         for i in deleteItems:
             self.dat.remove(i)
+            assert not i in self.dat, i
         
         # データを作る
         self.dat = datWeb + self.dat
@@ -182,14 +181,20 @@ class WidgetsWindow:
         for item in self.dat[::-1]:
             date = datetime.datetime.fromisoformat(item["date"])
             if item["title"] not in listFavTitle:
-                id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                id = self.tree.insert(parent="", index=-1, values=(item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item","new"])
             else:
-                id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags="item")
+                id = self.tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item","new"])
             # ペアを格納
-            self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {})}
+            self.idUrlPair[id] = {"url": item["url"], "user": item.get("user", {}), "flagNew": 1}
         
         # ローカルに保存する
         json.dump(self.dat, open(PGMFILE + "/lib/data/Qiita.json", "w"), indent=2, ensure_ascii=False)
+
+        # 古いデータを消す
+        for i, v in self.idUrlPair.items():
+            if v["flagNew"] == 0:
+                self.tree.delete(i)
+
 
 
     
