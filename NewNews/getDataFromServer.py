@@ -3,7 +3,7 @@
 import pickle, socket, logging, time
 from typing import List, Dict
 
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+# logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 IP_ADDRESS = "133.242.175.169"
@@ -15,7 +15,7 @@ BUFFER_SIZE = 4096
 def get_data_from_server() -> List[Dict]:
     """サーバからデータを取得する"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(60)
+        s.settimeout(30)
         logging.info("start TCP")
         # サーバに接続を要求する
         s.connect((IP_ADDRESS, PORT))

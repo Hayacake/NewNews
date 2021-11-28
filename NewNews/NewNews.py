@@ -16,8 +16,9 @@ PGMFILE = os.path.dirname(__file__)
 
 
 # TODO: コードのクリーンアップ
-# TODO: 処理の状況を伝えるメッセージ
-# TODO: ブックマーク機能
+# NOTE: 処理の状況を伝えるメッセージ
+# TODO: ブックマーク機能(ボタンの配置がうまくいかん)
+    # TODO: 別タブに表示する
 # TODO: リストの体裁を整える
 
 
@@ -33,8 +34,12 @@ class WidgetsWindow:
 
         # ===============================================================================================
 
+        # ボタン用のフレーム
+        self.btnframe = tk.Frame(self.root)
+
         # お気に入りボタン
-        self.btnFav = ttk.Button(self.root, text="Favorite", command=self.push_button_fav)
+        self.btnFav = ttk.Button(self.btnframe, text="Favorite", command=self.push_button_fav)
+        self.btnbook = ttk.Button(self.btnframe, text="Bookmark", command=self.push_button_book)
 
         # お気に入りデータの読み込み
         self.favData = self.load_fav()
@@ -88,7 +93,9 @@ class WidgetsWindow:
         # ===============================================================================================
 
         # 描画する
-        self.btnFav.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=10)
+        self.btnframe.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=7)
+        self.btnFav.pack(side=tk.LEFT, anchor=tk.W, padx=5, pady=0)
+        self.btnbook.pack(side=tk.LEFT, anchor=tk.N, padx=5, pady=0)
         self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=5)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         # ===============================================================================================
@@ -119,22 +126,28 @@ class WidgetsWindow:
         logging.info("start loading server file")
 
         # ファイルを読み込む
-        datServer = get_data_from_server()
+        datServer = []
+        try:
+            datServer = get_data_from_server()
+            if datetime.datetime.fromisoformat(self.dat[0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
+                logging.info("local data is newest")
+                self.is_server.set()               # 最新情報を動かす
+                pass
+            else:
+                logging.info("update to server data (local data is not newest)")
+                self.dat = datServer
 
-        if datetime.datetime.fromisoformat(self.dat[0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
-            logging.info("local data is newest")
-            self.is_server.set()               # 最新情報を動かす
-            pass
-        else:
-            logging.info("update to server data (local data is not newest)")
-            self.dat = datServer
+                self.is_server.set()               # 最新情報を動かす
 
-            self.is_server.set()               # 最新情報を動かす
+                # データを挿入する
+                self._insert_tree(favData, datServer, isServer=True)
 
-            # データを挿入する
-            self._insert_tree(favData, datServer, back=False, isServer=True)
+                logging.info("success loading server file")
+        except Exception as err:
+            print(err)
+            self.is_server.set()
 
-        logging.info("success loading server file")
+        
 
 
 
@@ -166,7 +179,7 @@ class WidgetsWindow:
         self.dat = datWeb + self.dat
         
         # データを挿入する
-        self._insert_tree(favData, self.dat, back=False)
+        self._insert_tree(favData, self.dat, new=True)
         
         # ローカルに保存する
         json.dump(self.dat, open(PGMFILE + "/lib/data/Qiita.json", "w"), indent=2, ensure_ascii=False)
@@ -185,16 +198,13 @@ class WidgetsWindow:
 
 
 # ================ヘルパー関数================
-    def _insert_tree(self, favData: List[Dict], data: List[Dict], back: bool = True, isServer: bool = False) -> Dict[str, Union[str, Dict, int]]:
+    def _insert_tree(self, favData: List[Dict], data: List[Dict], new = False, isServer: bool = False):
         """Treeviewに`data`を挿入する"""
         # お気に入りをリストにまとめる
         listFavTitle = [item["title"] for item in favData]
 
-        # 前に入れるか後ろに入れるかのチェック
-        order = 1 if back else -1
-
         # 挿入していく
-        for i in data[::order]:
+        for i in data[::-1]:
             # serverからの情報の時はreadパラメータを変える必要がある
             if isServer:
                 i["read"] = 1
@@ -216,7 +226,7 @@ class WidgetsWindow:
                 else:
                     id = self.tree.insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             # ペアを格納
-            self.idUrlPair[id] = {"url": i["url"], "user": i.get("user", {}), "flagNew": 1}
+            self.idUrlPair[id] = {"url": i["url"], "user": i.get("user", {}), "flagNew": 1 if new else 0}
 
 
 
@@ -229,7 +239,6 @@ class WidgetsWindow:
         webbrowser.open(self.idUrlPair[select]["url"])
 
     
-
     def push_button_fav(self) -> None:
         select = self.tree.focus()
         if select == "":
@@ -244,6 +253,14 @@ class WidgetsWindow:
                 self.tree.set(select, "Title", "⭐️ " + recordVal[0])
                 self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
             json.dump(self.favData, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=False)
+
+    
+    def push_button_book(self) -> None:
+        select = self.tree.focus()
+        if select == "":
+            pass
+        else:
+            print("bookmarked")
 
     
 
