@@ -3,8 +3,9 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
+from tkinter import messagebox
 import json, datetime, webbrowser, os, threading, logging
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from Qiita import get_new_items
 from getDataFromServer import get_data_from_server
@@ -45,10 +46,18 @@ class WidgetsWindow:
         self.favData = self.load_fav()
 
         # ===============================================================================================
+        # タブ
+        self.notebook = ttk.Notebook(root)
+        
+        self.tabAll = tk.Frame(self.notebook)
+        self.tabBooked = tk.Frame(self.notebook)
 
-        # リスト
+        self.notebook.add(self.tabAll, text="All")
+        self.notebook.add(self.tabBooked, text="bookmark")
+
+        # リスト(all)
         self.column = ('Title', 'Tags', 'Date')
-        self.tree = ttk.Treeview(self.root, columns=self.column)
+        self.tree = ttk.Treeview(self.tabAll, columns=self.column)
 
         # 列の設定
         self.tree.column('#0',width=0, stretch='no')
@@ -62,18 +71,20 @@ class WidgetsWindow:
         self.tree.heading('Date',text='Date', anchor='center')
 
 
+        # 各種データ保存用
+        self.dat = {}
         # データ保存用のIDペア
         self.idUrlPair = {}
 
         # ローカルからデータの追加
-        self.load_local_data(self.favData)
+        self.load_local_data(self.favData, "Qiita")
 
         # サーバとローカルによるデータの更新+最新情報の取得(別スレッドで)
         self.is_server = threading.Event()
-        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, ), name="Server")
+        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, "Qitta", ), name="Server")
         thLoadingServer.start()
 
-        thLoadingNewest = threading.Thread(target=self.load_newest_data, args=(self.favData, ), name="Newest")
+        thLoadingNewest = threading.Thread(target=self.load_newest_data, args=(self.favData, "Qiita", ), name="Newest")
         thLoadingNewest.start()
 
         # 未読と既読を色分けする
@@ -87,8 +98,29 @@ class WidgetsWindow:
         # ===============================================================================================
 
         # スクロールバー
-        self.scrollbar = ttk.Scrollbar(self.root, orient=tk.VERTICAL, command=self.tree.yview)
+        self.scrollbar = ttk.Scrollbar(self.tabAll, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscroll=self.scrollbar.set)
+
+        # ===============================================================================================
+
+        # リスト(Booked)
+        # リスト(all)
+        self.column = ('Title', 'Tags', 'Date')
+        self.treeBook = ttk.Treeview(self.tabBooked, columns=self.column)
+
+        # 列の設定
+        self.treeBook.column('#0',width=0, stretch='no')
+        self.treeBook.column('Title', anchor='center', width=200, stretch=True)
+        self.treeBook.column('Tags',anchor='w', width=200)
+        self.treeBook.column('Date', anchor='center', width=5, minwidth=5)
+        # 列の見出し設定
+        self.treeBook.heading('#0',text='')
+        self.treeBook.heading('Title', text='Title',anchor='center')
+        self.treeBook.heading('Tags', text='Tags', anchor='w')
+        self.treeBook.heading('Date',text='Date', anchor='center')
+
+        self.scrollbarBook = ttk.Scrollbar(self.tabBooked, orient=tk.VERTICAL, command=self.tree.yview)
+        self.treeBook.configure(yscroll=self.scrollbarBook.set)
 
         # ===============================================================================================
 
@@ -96,20 +128,25 @@ class WidgetsWindow:
         self.btnframe.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=7)
         self.btnFav.pack(side=tk.LEFT, anchor=tk.W, padx=5, pady=0)
         self.btnbook.pack(side=tk.LEFT, anchor=tk.N, padx=5, pady=0)
-        self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=15, pady=5)
+
+        self.notebook.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=5, pady=0)
+        self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.treeBook.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
+        self.scrollbarBook.pack(side=tk.RIGHT, fill=tk.Y)
+
         # ===============================================================================================
         
     
 
 
-    def load_local_data(self, favData: List[Dict]) -> None:
+    def load_local_data(self, favData: List[Dict], appName: str) -> None:
         """ローカルからファイルをロードする"""
         logging.info("start loading local file")
 
         # ファイルを読み込む
-        datLocal = json.load(open(PGMFILE + "/lib/data/Qiita.json"))
-        self.dat = datLocal
+        datLocal = json.load(open(PGMFILE + f"/lib/data/{appName}.json"))
+        self.dat[appName] = datLocal
 
         # 既読のタイトルリスト
         self.listRead = [item["title"] for item in datLocal if item.get("read", 0) == 1]
@@ -121,37 +158,40 @@ class WidgetsWindow:
 
 
 
-    def load_server_data(self, favData: List[Dict]) -> None:
+    def load_server_data(self, favData: List[Dict], appName: str) -> None:
         """サーバーからファイルをロードする"""
         logging.info("start loading server file")
 
         # ファイルを読み込む
-        datServer = []
-        try:
-            datServer = get_data_from_server()
-            if datetime.datetime.fromisoformat(self.dat[0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
-                logging.info("local data is newest")
-                self.is_server.set()               # 最新情報を動かす
-                pass
-            else:
-                logging.info("update to server data (local data is not newest)")
-                self.dat = datServer
+        while True:
+            try:
+                datServer = get_data_from_server()
+                if datetime.datetime.fromisoformat(self.dat[appName][0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
+                    logging.info("local data is newest")
+                    self.is_server.set()               # 最新情報を動かす
+                    pass
+                else:
+                    logging.info("update to server data (local data is not newest)")
+                    self.dat[appName] = datServer
 
-                self.is_server.set()               # 最新情報を動かす
+                    self.is_server.set()               # 最新情報を動かす
 
-                # データを挿入する
-                self._insert_tree(favData, datServer, isServer=True)
+                    # データを挿入する
+                    self._insert_tree(favData, datServer, isServer=True)
 
-                logging.info("success loading server file")
-        except Exception as err:
-            print(err)
-            self.is_server.set()
+                    logging.info("success loading server file")
+                    break
+            except Exception as err:
+                retry = messagebox.askretrycancel(title="ERROR!", message=err)
+                if not retry:
+                    self.is_server.set()
+                    break
 
         
 
 
 
-    def load_newest_data(self, favData: List[Dict]) -> None:
+    def load_newest_data(self, favData: List[Dict], appName: str) -> None:
         """最新の情報をAPIから取得する"""
         logging.info("start loading from web API")
 
@@ -162,7 +202,7 @@ class WidgetsWindow:
 
         # delete multify 
         i = 0; deleteItems = []; listWebTitle = [article["title"] for article in datWeb]
-        for item in self.dat:
+        for item in self.dat[appName]:
             flag = 0
             if item["title"] in listWebTitle:
                 deleteItems.append(item)
@@ -172,17 +212,17 @@ class WidgetsWindow:
             if i > 5:
                 break
         for i in deleteItems:
-            self.dat.remove(i)
-            assert not i in self.dat, i
+            self.dat[appName].remove(i)
+            assert not i in self.dat[appName], i
         
         # データを作る
-        self.dat = datWeb + self.dat
+        self.dat[appName] = datWeb + self.dat[appName]
         
         # データを挿入する
-        self._insert_tree(favData, self.dat, new=True)
+        self._insert_tree(favData, self.dat[appName], new=True)
         
         # ローカルに保存する
-        json.dump(self.dat, open(PGMFILE + "/lib/data/Qiita.json", "w"), indent=2, ensure_ascii=False)
+        json.dump(self.dat[appName], open(PGMFILE + "/lib/data/Qiita.json", "w"), indent=2, ensure_ascii=False)
 
         # 古いデータを消す
         for i, v in self.idUrlPair.items():
@@ -260,7 +300,7 @@ class WidgetsWindow:
         if select == "":
             pass
         else:
-            print("bookmarked")
+            print(f"bookmarked: {select}")
 
     
 
