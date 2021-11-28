@@ -18,7 +18,7 @@ PGMFILE = os.path.dirname(__file__)
 
 # TODO: コードのクリーンアップ
 # NOTE: 処理の状況を伝えるメッセージ
-# TODO: ブックマーク機能(ボタンの配置がうまくいかん)
+# TODO: ブックマーク機能
     # TODO: 別タブに表示する
 # TODO: リストの体裁を整える
 
@@ -104,7 +104,7 @@ class WidgetsWindow:
         # ===============================================================================================
 
         # リスト(Booked)
-        # リスト(all)
+        self.bookDat = self.load_book()
         self.column = ('Title', 'Tags', 'Date')
         self.treeBook = ttk.Treeview(self.tabBooked, columns=self.column)
 
@@ -236,6 +236,11 @@ class WidgetsWindow:
         return favData
 
 
+    def load_book(self) -> List[Dict]:
+        bookdat = json.load(open(PGMFILE + "/lib/data/bookmark.json"))
+        return bookdat
+
+
 
 # ================ヘルパー関数================
     def _insert_tree(self, favData: List[Dict], data: List[Dict], new = False, isServer: bool = False):
@@ -297,10 +302,17 @@ class WidgetsWindow:
     
     def push_button_book(self) -> None:
         select = self.tree.focus()
+        booklist = [item["title"] for item in self.bookDat]
         if select == "":
             pass
         else:
-            print(f"bookmarked: {select}")
+            recordVal = self.tree.item(select, "values")
+            # すでにお気に入り登録されているかのチェック
+            if recordVal[0] in booklist:
+                self.bookDat.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
+            else:
+                self.bookDat.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
+            json.dump(self.bookDat, open(PGMFILE + "/lib/data/bookmark.json", "w"), indent=2, ensure_ascii=False)
 
     
 
