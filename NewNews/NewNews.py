@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /Users/kakeru/opt/anaconda3/bin/python3
 # NewNews.py - サーバからデータをダウンロードして表示する
 
 import tkinter as tk
@@ -263,7 +263,6 @@ class WidgetsWindow:
         """Treeviewに`data`を挿入する"""
         # お気に入りをリストにまとめる
         listFavTitle = [item["title"] for item in favData]
-        print(self.dictTree[appName])
 
         # 挿入していく
         for i in data[::-1]:
