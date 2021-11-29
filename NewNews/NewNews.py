@@ -4,7 +4,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import messagebox
-import json, datetime, webbrowser, os, threading, logging
+import json, datetime, webbrowser, os, threading, logging, traceback
 from typing import Dict, List
 
 from Qiita import get_new_items
@@ -55,72 +55,82 @@ class WidgetsWindow:
         self.notebook.add(self.tabAll, text="All")
         self.notebook.add(self.tabBooked, text="bookmark")
 
-        # リスト(all)
+        # リストの準備
         self.column = ('Title', 'Tags', 'Date')
-        self.tree = ttk.Treeview(self.tabAll, columns=self.column)
+        # リストをしまう辞書
+        self.dictTree: Dict[str, ttk.Treeview] = {}
+
+
+        # リスト(all)
+        self.dictTree["Qiita"] = ttk.Treeview(self.tabAll, columns=self.column)
 
         # 列の設定
-        self.tree.column('#0',width=0, stretch='no')
-        self.tree.column('Title', anchor='center', width=200, stretch=True)
-        self.tree.column('Tags',anchor='w', width=200)
-        self.tree.column('Date', anchor='center', width=5, minwidth=5)
+        self.dictTree["Qiita"].column('#0',width=0, stretch='no')
+        self.dictTree["Qiita"].column('Title', anchor='center', width=200, stretch=True)
+        self.dictTree["Qiita"].column('Tags',anchor='w', width=200)
+        self.dictTree["Qiita"].column('Date', anchor='center', width=5, minwidth=5)
         # 列の見出し設定
-        self.tree.heading('#0',text='')
-        self.tree.heading('Title', text='Title',anchor='center')
-        self.tree.heading('Tags', text='Tags', anchor='w')
-        self.tree.heading('Date',text='Date', anchor='center')
+        self.dictTree["Qiita"].heading('#0',text='')
+        self.dictTree["Qiita"].heading('Title', text='Title',anchor='center')
+        self.dictTree["Qiita"].heading('Tags', text='Tags', anchor='w')
+        self.dictTree["Qiita"].heading('Date',text='Date', anchor='center')
 
 
         # 各種データ保存用
         self.dat = {}
         # データ保存用のIDペア
         self.idUrlPair = {}
+        # 既読リスト
+        self.dictRead = {}
 
         # ローカルからデータの追加
-        self.load_local_data(self.favData, "Qiita")
+        self.load_local_data(favData=self.favData, appName="Qiita")
 
         # サーバとローカルによるデータの更新+最新情報の取得(別スレッドで)
         self.is_server = threading.Event()
-        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, "Qitta", ), name="Server")
+        thLoadingServer = threading.Thread(target=self.load_server_data, args=(self.favData, "Qiita", ), name="Server")
         thLoadingServer.start()
 
         thLoadingNewest = threading.Thread(target=self.load_newest_data, args=(self.favData, "Qiita", ), name="Newest")
         thLoadingNewest.start()
 
         # 未読と既読を色分けする
-        self.tree.tag_configure("unread", background="#a0d8ef")
+        self.dictTree["Qiita"].tag_configure("unread", background="#a0d8ef")
 
         # イベントの追加
         # URLオープンイベント
-        self.tree.tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
-        self.tree.tag_bind("item", "<Return>", self.event_open_url)
+        self.dictTree["Qiita"].tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
+        self.dictTree["Qiita"].tag_bind("item", "<Return>", self.event_open_url)
 
         # ===============================================================================================
 
         # スクロールバー
-        self.scrollbar = ttk.Scrollbar(self.tabAll, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscroll=self.scrollbar.set)
+        self.scrollbar = ttk.Scrollbar(self.tabAll, orient=tk.VERTICAL, command=self.dictTree["Qiita"].yview)
+        self.dictTree["Qiita"].configure(yscroll=self.scrollbar.set)
 
         # ===============================================================================================
 
         # リスト(Booked)
         self.bookDat = self.load_book()
-        self.column = ('Title', 'Tags', 'Date')
-        self.treeBook = ttk.Treeview(self.tabBooked, columns=self.column)
+        self.dictTree["bookmark"] = ttk.Treeview(self.tabBooked, columns=self.column)
 
         # 列の設定
-        self.treeBook.column('#0',width=0, stretch='no')
-        self.treeBook.column('Title', anchor='center', width=200, stretch=True)
-        self.treeBook.column('Tags',anchor='w', width=200)
-        self.treeBook.column('Date', anchor='center', width=5, minwidth=5)
+        self.dictTree["bookmark"].column('#0',width=0, stretch='no')
+        self.dictTree["bookmark"].column('Title', anchor='center', width=200, stretch=True)
+        self.dictTree["bookmark"].column('Tags',anchor='w', width=200)
+        self.dictTree["bookmark"].column('Date', anchor='center', width=5, minwidth=5)
         # 列の見出し設定
-        self.treeBook.heading('#0',text='')
-        self.treeBook.heading('Title', text='Title',anchor='center')
-        self.treeBook.heading('Tags', text='Tags', anchor='w')
-        self.treeBook.heading('Date',text='Date', anchor='center')
+        self.dictTree["bookmark"].heading('#0',text='')
+        self.dictTree["bookmark"].heading('Title', text='Title',anchor='center')
+        self.dictTree["bookmark"].heading('Tags', text='Tags', anchor='w')
+        self.dictTree["bookmark"].heading('Date',text='Date', anchor='center')
 
-        self.scrollbarBook = ttk.Scrollbar(self.tabBooked, orient=tk.VERTICAL, command=self.tree.yview)
-        self.treeBook.configure(yscroll=self.scrollbarBook.set)
+        # データの挿入
+        self.load_local_data(appName="bookmark")
+
+        # スクロールバー
+        self.scrollbarBook = ttk.Scrollbar(self.tabBooked, orient=tk.VERTICAL, command=self.dictTree["bookmark"].yview)
+        self.dictTree["bookmark"].configure(yscroll=self.scrollbarBook.set)
 
         # ===============================================================================================
 
@@ -130,9 +140,9 @@ class WidgetsWindow:
         self.btnbook.pack(side=tk.LEFT, anchor=tk.N, padx=5, pady=0)
 
         self.notebook.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=5, pady=0)
-        self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
+        self.dictTree["Qiita"].pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.treeBook.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
+        self.dictTree["bookmark"].pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
         self.scrollbarBook.pack(side=tk.RIGHT, fill=tk.Y)
 
         # ===============================================================================================
@@ -140,19 +150,20 @@ class WidgetsWindow:
     
 
 
-    def load_local_data(self, favData: List[Dict], appName: str) -> None:
+    def load_local_data(self, appName: str, favData: List[Dict] = []) -> None:
         """ローカルからファイルをロードする"""
         logging.info("start loading local file")
+        app = appName
 
         # ファイルを読み込む
         datLocal = json.load(open(PGMFILE + f"/lib/data/{appName}.json"))
         self.dat[appName] = datLocal
 
         # 既読のタイトルリスト
-        self.listRead = [item["title"] for item in datLocal if item.get("read", 0) == 1]
+        self.dictRead[appName] = [item["title"] for item in datLocal if item.get("read", 0) == 1]
 
         # データを挿入する
-        self._insert_tree(favData, datLocal)
+        self._insert_tree(datLocal, favData, appName=app)
 
         logging.info("success loading local data")
 
@@ -161,6 +172,7 @@ class WidgetsWindow:
     def load_server_data(self, favData: List[Dict], appName: str) -> None:
         """サーバーからファイルをロードする"""
         logging.info("start loading server file")
+        app = appName
 
         # ファイルを読み込む
         while True:
@@ -169,7 +181,7 @@ class WidgetsWindow:
                 if datetime.datetime.fromisoformat(self.dat[appName][0]["date"]) >= datetime.datetime.fromisoformat(datServer[0]["date"]):
                     logging.info("local data is newest")
                     self.is_server.set()               # 最新情報を動かす
-                    pass
+                    break
                 else:
                     logging.info("update to server data (local data is not newest)")
                     self.dat[appName] = datServer
@@ -177,12 +189,12 @@ class WidgetsWindow:
                     self.is_server.set()               # 最新情報を動かす
 
                     # データを挿入する
-                    self._insert_tree(favData, datServer, isServer=True)
+                    self._insert_tree(datServer, favData==favData, appName=app, isServer=True)
 
                     logging.info("success loading server file")
                     break
             except Exception as err:
-                retry = messagebox.askretrycancel(title="ERROR!", message=err)
+                retry = messagebox.askretrycancel(title="ERROR!", message=traceback.format_exc())
                 if not retry:
                     self.is_server.set()
                     break
@@ -194,6 +206,7 @@ class WidgetsWindow:
     def load_newest_data(self, favData: List[Dict], appName: str) -> None:
         """最新の情報をAPIから取得する"""
         logging.info("start loading from web API")
+        app = appName
 
         # 最新の情報を取得する
         datWeb = get_new_items()
@@ -219,15 +232,15 @@ class WidgetsWindow:
         self.dat[appName] = datWeb + self.dat[appName]
         
         # データを挿入する
-        self._insert_tree(favData, self.dat[appName], new=True)
+        self._insert_tree(self.dat[appName], favData, appName=app, new=True)
         
         # ローカルに保存する
-        json.dump(self.dat[appName], open(PGMFILE + "/lib/data/Qiita.json", "w"), indent=2, ensure_ascii=False)
+        json.dump(self.dat[appName], open(PGMFILE + f"/lib/data/{appName}.json", "w"), indent=2, ensure_ascii=False)
 
         # 古いデータを消す
         for i, v in self.idUrlPair.items():
             if v["flagNew"] == 0:
-                self.tree.delete(i)
+                self.dictTree[appName].delete(i)
 
 
 
@@ -243,10 +256,11 @@ class WidgetsWindow:
 
 
 # ================ヘルパー関数================
-    def _insert_tree(self, favData: List[Dict], data: List[Dict], new = False, isServer: bool = False):
+    def _insert_tree(self, data: List[Dict], favData: List[Dict], appName: str, new = False, isServer: bool = False):
         """Treeviewに`data`を挿入する"""
         # お気に入りをリストにまとめる
         listFavTitle = [item["title"] for item in favData]
+        print(self.dictTree[appName])
 
         # 挿入していく
         for i in data[::-1]:
@@ -256,62 +270,64 @@ class WidgetsWindow:
             # 日付形式の変更
             date = datetime.datetime.fromisoformat(i["date"])
             
+            
+            listr = self.dictRead[appName]
             if i["title"] not in listFavTitle:
                 # お気に入りではないとき
-                if i["title"] not in self.listRead:
+                if i["title"] not in listr:
                     # 新着記事の時
-                    id = self.tree.insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
+                    id = self.dictTree[appName].insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
                 else:
-                    id = self.tree.insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
+                    id = self.dictTree[appName].insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             else:
                 # お気に入りの時
-                if i["title"] not in self.listRead:
+                if i["title"] not in listr:
                     # 新着記事の時
-                    id = self.tree.insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
+                    id = self.dictTree[appName].insert(parent="", index=-1, values=("⭐️ " + i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old", "unread"])
                 else:
-                    id = self.tree.insert(parent="", index=-1, values=(i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
+                    id = self.dictTree[appName].insert(parent="", index=-1, values=("⭐️ " + i["title"], ", ".join(i["tags"]), date.strftime("%h %d - %H:%M")), tags=["item", "old"])
             # ペアを格納
-            self.idUrlPair[id] = {"url": i["url"], "user": i.get("user", {}), "flagNew": 1 if new else 0}
+            self.idUrlPair[id] = {"url": i["url"], "user": i.get("user", {}), "flagNew": 1 if new else 0, "date": i["date"]}
 
 
 
 # ================ボタンコマンド================
     def event_open_url(self, event):
         if event.type == "4":
-            select = self.tree.identify_row(event.y)
+            select = self.dictTree["Qiita"].identify_row(event.y)
         elif event.type == "2":
-            select = self.tree.focus()
+            select = self.dictTree["Qiita"].focus()
         webbrowser.open(self.idUrlPair[select]["url"])
 
     
     def push_button_fav(self) -> None:
-        select = self.tree.focus()
+        select = self.dictTree["Qiita"].focus()
         if select == "":
             pass
         else:
-            recordVal = self.tree.item(select, "values")
+            recordVal = self.dictTree["Qiita"].item(select, "values")
             # すでにお気に入り登録されているかのチェック
             if recordVal[0].startswith("⭐️ "):
-                self.tree.set(select, "Title", recordVal[0].lstrip("⭐️ "))
-                self.favData.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
+                self.dictTree["Qiita"].set(select, "Title", recordVal[0].lstrip("⭐️ "))
+                self.favData.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": self.idUrlPair[select]["date"]})
             else:
-                self.tree.set(select, "Title", "⭐️ " + recordVal[0])
-                self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
+                self.dictTree["Qiita"].set(select, "Title", "⭐️ " + recordVal[0])
+                self.favData.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": self.idUrlPair[select]["date"]})
             json.dump(self.favData, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=False)
 
     
     def push_button_book(self) -> None:
-        select = self.tree.focus()
+        select = self.dictTree["Qiita"].focus()
         booklist = [item["title"] for item in self.bookDat]
         if select == "":
             pass
         else:
-            recordVal = self.tree.item(select, "values")
+            recordVal = self.dictTree["Qiita"].item(select, "values")
             # すでにお気に入り登録されているかのチェック
             if recordVal[0] in booklist:
-                self.bookDat.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
+                self.bookDat.remove({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": self.idUrlPair[select]["date"]})
             else:
-                self.bookDat.append({"title": recordVal[0], "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": recordVal[2]})
+                self.bookDat.append({"title": recordVal[0].lstrip("⭐️ "), "tags": recordVal[1].split(sep=", "), "user": self.idUrlPair[select]["user"], "url": self.idUrlPair[select]["url"], "date": self.idUrlPair[select]["date"]})
             json.dump(self.bookDat, open(PGMFILE + "/lib/data/bookmark.json", "w"), indent=2, ensure_ascii=False)
 
     
