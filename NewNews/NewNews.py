@@ -18,8 +18,6 @@ PGMFILE = os.path.dirname(__file__)
 
 # TODO: コードのクリーンアップ
 # NOTE: 処理の状況を伝えるメッセージ
-# TODO: ブックマーク機能
-    # TODO: 別タブに表示する
 # TODO: リストの体裁を整える
 
 
@@ -99,8 +97,8 @@ class WidgetsWindow:
 
         # イベントの追加
         # URLオープンイベント
-        self.dictTree["Qiita"].tag_bind("item", "<Double-ButtonPress>", self.event_open_url)
-        self.dictTree["Qiita"].tag_bind("item", "<Return>", self.event_open_url)
+        self.dictTree["Qiita"].tag_bind("item", "<Double-ButtonPress>", lambda event: self.event_open_url(event, "Qiita"))
+        self.dictTree["Qiita"].tag_bind("item", "<Return>", lambda event: self.event_open_url(event, "Qiita"))
 
         # ===============================================================================================
 
@@ -127,6 +125,11 @@ class WidgetsWindow:
 
         # データの挿入
         self.load_local_data(appName="bookmark")
+
+        # イベントの追加
+        # URLオープンイベント
+        self.dictTree["bookmark"].tag_bind("item", "<Double-ButtonPress>", lambda event: self.event_open_url(event, "bookmark"))
+        self.dictTree["bookmark"].tag_bind("item", "<Return>", lambda event: self.event_open_url(event, "bookmark"))
 
         # スクロールバー
         self.scrollbarBook = ttk.Scrollbar(self.tabBooked, orient=tk.VERTICAL, command=self.dictTree["bookmark"].yview)
@@ -270,7 +273,7 @@ class WidgetsWindow:
             # 日付形式の変更
             date = datetime.datetime.fromisoformat(i["date"])
             
-            
+
             listr = self.dictRead[appName]
             if i["title"] not in listFavTitle:
                 # お気に入りではないとき
@@ -292,11 +295,11 @@ class WidgetsWindow:
 
 
 # ================ボタンコマンド================
-    def event_open_url(self, event):
+    def event_open_url(self, event, appName):
         if event.type == "4":
-            select = self.dictTree["Qiita"].identify_row(event.y)
+            select = self.dictTree[appName].identify_row(event.y)
         elif event.type == "2":
-            select = self.dictTree["Qiita"].focus()
+            select = self.dictTree[appName].focus()
         webbrowser.open(self.idUrlPair[select]["url"])
 
     
