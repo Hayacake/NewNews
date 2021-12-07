@@ -4,4 +4,4 @@ NewNews/logs
 NewNews/__pycache__
 
 NewNews.command
-NewNews/NewNewsOld
+NewNews/NewNewsOld.py
