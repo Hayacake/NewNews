@@ -74,6 +74,9 @@ class WidgetsWindow():
         tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+        # ローカルのデータを読み込む
+        
+
         # 種々のデータを格納する
         self.tab_dict[appname] = tab
         self.tree_dict[appname] = (tree, scrollbar)
