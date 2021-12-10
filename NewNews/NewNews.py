@@ -1,10 +1,10 @@
 #! /Users/kakeru/opt/anaconda3/bin/python3
 # NewNews.py - サーバからデータをダウンロードして表示する
 
-# TODO: クリックされたURLを開く機能
 # TODO: お気に入り機能とブックマーク機能
 # TODO: サーバーと最新の情報を入手する
 # NOTE: 処理の状況を伝えるメッセージ
+# TODO: configファイルから読み込むアプリを決定する
 # TODO: リストの体裁を整える
 
 
@@ -14,7 +14,7 @@ from tkinter import Frame, messagebox
 import json, datetime, webbrowser, os, threading, logging, traceback
 from typing import Dict, List, Tuple
 
-import dataLoad, eventFunc
+import dataLoad
 from Qiita import get_new_items
 from getDataFromServer import get_data_from_server
 
@@ -31,6 +31,8 @@ class WidgetsWindow():
         # 種々のリストのセッティング
         self.tab_dict: Dict[str, ttk.Frame] = {}                # タブをしまうようのリスト
         self.tree_dict: Dict[str, Tuple[ttk.Treeview, ttk.Scrollbar]] = {}      # ツリーをしまうようのリスト
+        self.dat = {}       # データをしまうリスト
+        self.pairs = {}     # リストの表示情報をしまうリスト
 
 
         # ボタンのセッティング
@@ -48,7 +50,7 @@ class WidgetsWindow():
 
         # Qiitaのツリーを作る
         self.make_list("Qiita")
-
+        
 
 
     def make_list(self, appname: str) -> None:
@@ -80,11 +82,29 @@ class WidgetsWindow():
 
         # ローカルのデータを読み込む
         dat, pairs = dataLoad.load_local_data(tree, appname)
+        
+        # イベントを設定する
+        tree.tag_bind("item", "<Double-ButtonPress>", lambda event: self.open_url(event, tree, pairs))
+        tree.tag_bind("item", "<Return>", lambda event: self.open_url(event, tree, pairs))
 
         # 種々のデータを格納する
+        # タブとツリーを格納する
         self.tab_dict[appname] = tab                    # タブをしまう
         self.tree_dict[appname] = (tree, scrollbar)     # ツリーをしまう
+        self.dat[appname] = dat
+        self.pairs[appname] = pairs
 
+
+
+    def open_url(self, event, tree: ttk.Treeview, pairs: Dict[str, Dict]) -> str:
+        """ツリーイベント: rowの記事サイトを開く。URLを返す"""
+        if event.type == "4":
+            select = tree.identify_row(event.y)
+        elif event.type == "2":
+            select = tree.focus()
+        url = pairs[select]["url"]
+        webbrowser.open(url)
+        return url
 
 
 
