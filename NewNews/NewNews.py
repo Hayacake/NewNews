@@ -10,11 +10,10 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter import Frame, messagebox
-import json, datetime, webbrowser, os, threading, logging, traceback
+import json, datetime, os, threading, logging, traceback
 from typing import Dict, List, Tuple
 
-import dataLoad
+import dataLoad, eventFunc
 from Qiita import get_new_items
 from getDataFromServer import get_data_from_server
 
@@ -84,8 +83,8 @@ class WidgetsWindow():
         dat, pairs = dataLoad.load_local_data(tree, appname)
         
         # イベントを設定する
-        tree.tag_bind("item", "<Double-ButtonPress>", lambda event: self.open_url(event, tree, pairs))
-        tree.tag_bind("item", "<Return>", lambda event: self.open_url(event, tree, pairs))
+        tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
+        tree.tag_bind("item", "<Return>", lambda event: eventFunc.open_url(event, tree, pairs))
 
         # 種々のデータを格納する
         # タブとツリーを格納する
@@ -96,15 +95,7 @@ class WidgetsWindow():
 
 
 
-    def open_url(self, event, tree: ttk.Treeview, pairs: Dict[str, Dict]) -> str:
-        """ツリーイベント: rowの記事サイトを開く。URLを返す"""
-        if event.type == "4":
-            select = tree.identify_row(event.y)
-        elif event.type == "2":
-            select = tree.focus()
-        url = pairs[select]["url"]
-        webbrowser.open(url)
-        return url
+    
 
 
 
