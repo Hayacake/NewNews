@@ -2,6 +2,7 @@
 # NewNews.py - サーバからデータをダウンロードして表示する
 
 # TODO: お気に入り機能とブックマーク機能
+# BUG: お気に入り機能とブックマーク機能が一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
 # TODO: サーバーと最新の情報を入手する
 # NOTE: 処理の状況を伝えるメッセージ
 # TODO: configファイルから読み込むアプリを決定する
@@ -32,11 +33,12 @@ class WidgetsWindow():
         self.tree_dict: Dict[str, Tuple[ttk.Treeview, ttk.Scrollbar]] = {}      # ツリーをしまうようのリスト
         self.dat = {}       # データをしまうリスト
         self.pairs = {}     # リストの表示情報をしまうリスト
+        self.favdat = []
 
 
         # ボタンのセッティング
         self.btnframe = tk.Frame(self.root)                     # ボタンの枠
-        self.btnFav = ttk.Button(self.btnframe, text="Favorite" """, command=self.push_button_fav""")
+        self.btnFav = ttk.Button(self.btnframe, text="Favorite", command=lambda: self.fav_button_cmd("Qiita"))
         self.btnbook = ttk.Button(self.btnframe, text="Bookmark" """, command=self.push_button_book""")
         # ボタンの描画
         self.btnframe.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=7)
@@ -92,6 +94,27 @@ class WidgetsWindow():
         self.tree_dict[appname] = (tree, scrollbar)     # ツリーをしまう
         self.dat[appname] = dat
         self.pairs[appname] = pairs
+
+    
+
+    def fav_button_cmd(self, appname: str) -> List[Dict]:
+        """お気に入りボタン"""
+        # BUG: 一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
+        select = self.tree_dict[appname][0].focus()
+        if select == "":
+            pass
+        else:
+            select_value = self.tree_dict[appname][0].item(select, "values")
+            if select_value[0].startswith("⭐️ "):
+                # すでにお気に入り登録されている時
+                self.tree_dict[appname][0].set(select, "Title", select_value[0][3:])
+                self.favdat.remove({"title": select_value[0][3:], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]})
+            else:
+                # お気に入り登録されていない時
+                self.tree_dict[appname][0].set(select, "Title", "⭐️ " + select_value[0])
+                self.favdat.append({"title": select_value[0], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]})
+        json.dump(self.favdat, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=False)
+        
 
 
 

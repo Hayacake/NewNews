@@ -4,7 +4,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import webbrowser, os
 
-from typing import Dict
+from typing import Dict, List
 
 PGMFILE = os.path.dirname(__file__)
 
