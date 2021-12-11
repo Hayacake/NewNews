@@ -1,7 +1,7 @@
 #! /Users/kakeru/opt/anaconda3/bin/python3
 # NewNews.py - サーバからデータをダウンロードして表示する
 
-# TODO: ブックマーク機能
+# TODO: ブックマークされた記事の行の色を変える
 # BUG: お気に入り機能とブックマーク機能が一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
 # TODO: サーバーと最新の情報を入手する
 # NOTE: 処理の状況を伝えるメッセージ
@@ -34,12 +34,13 @@ class WidgetsWindow():
         self.dat = {}       # データをしまうリスト
         self.pairs = {}     # リストの表示情報をしまうリスト
         self.favdat = dataLoad.load_fav()         # お気に入りリストの読み込み
+        self.bookdat = dataLoad.load_book()       # ブックマークリストの読み込み
 
 
         # ボタンのセッティング
         self.btnframe = tk.Frame(self.root)                     # ボタンの枠
         self.btnFav = ttk.Button(self.btnframe, text="Favorite", command=lambda: self.fav_button_cmd("Qiita"))
-        self.btnbook = ttk.Button(self.btnframe, text="Bookmark" """, command=self.push_button_book""")
+        self.btnbook = ttk.Button(self.btnframe, text="Bookmark", command=lambda: self.book_button_cmd("Qiita"))
         # ボタンの描画
         self.btnframe.pack(side=tk.TOP, anchor=tk.W, padx=15, pady=7)
         self.btnFav.pack(side=tk.LEFT, anchor=tk.W, padx=5, pady=0)
@@ -50,11 +51,12 @@ class WidgetsWindow():
         self.notebook.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=5, pady=0)
 
         # Qiitaのツリーを作る
-        self.make_list("Qiita")
+        self.make_list("Qiita", self.favdat)
+        self.make_list("bookmark")
         
 
 
-    def make_list(self, appname: str, **kwd) -> None:
+    def make_list(self, appname: str, favdat: List[Dict] = [], **kwd) -> None:
         """タブとツリーを作る"""
         # タブを作る
         tab = ttk.Frame(self.notebook)
@@ -82,7 +84,7 @@ class WidgetsWindow():
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # ローカルのデータを読み込む(メインの記事の時)
-        dat, pairs = dataLoad.load_local_data(tree, appname, favdat=self.favdat)
+        dat, pairs = dataLoad.load_local_data(tree, appname, favdat=favdat)
         
         # イベントを設定する
         tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
@@ -97,7 +99,7 @@ class WidgetsWindow():
 
     
 
-    def fav_button_cmd(self, appname: str) -> List[Dict]:
+    def fav_button_cmd(self, appname: str) -> None:
         """お気に入りボタン"""
         # BUG: 一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
         select = self.tree_dict[appname][0].focus()
@@ -114,7 +116,27 @@ class WidgetsWindow():
                 self.tree_dict[appname][0].set(select, "Title", "⭐️ " + select_value[0])
                 self.favdat.append({"title": select_value[0], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]})
         json.dump(self.favdat, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=False)
-        
+    
+
+    def book_button_cmd(self, appname: str) -> None:
+        """ブックマークボタン"""
+        # BUG: 一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
+        list_book = [item["title"] for item in self.bookdat]
+        select = self.tree_dict[appname][0].focus()
+        if select == "":
+            pass
+        else:
+            select_value = self.tree_dict[appname][0].item(select, "values")
+            item_info = {"title": self.pairs[appname][select]["title"], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]}
+            if self.pairs[appname][select]["title"] in list_book:
+                # すでにブックマークされている時
+                self.bookdat.remove(item_info)
+            else:
+                # ブックマークされていない時
+                self.bookdat.append(item_info)
+        json.dump(self.bookdat, open(PGMFILE + "/lib/data/bookmark.json", "w"), indent=2, ensure_ascii=False)
+        self.tree_dict["bookmark"][0].delete(*list(self.pairs["bookmark"].keys()))
+        self.dat["bookmark"], self.pairs["bookmark"] = dataLoad.load_local_data(self.tree_dict["bookmark"][0], "bookmark")
 
 
 

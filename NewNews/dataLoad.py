@@ -24,7 +24,7 @@ def load_local_data(tree: ttk.Treeview, appname: str, favdat: List[Dict] = []) -
 
 
 
-def _insert_row(tree: ttk.Treeview, data: Dict, favdat: List[Dict] = []) -> Dict:
+def _insert_row(tree: ttk.Treeview, data: List[Dict], favdat: List[Dict]) -> Dict:
     # 表示しないさまざまな情報を格納しておく
     id_url_pairs = {}
     # お気に入りリスト中のタイトルをしまう
@@ -40,7 +40,7 @@ def _insert_row(tree: ttk.Treeview, data: Dict, favdat: List[Dict] = []) -> Dict
             # お気に入りの時
             id = tree.insert(parent="", index=-1, values=("⭐️ " + item["title"], ", ".join(item["tags"]), date.strftime("%h %d - %H:%M")), tags=["item"])
         # 情報の格納
-        id_url_pairs[id] = {"url": item["url"], "user": item.get("user", {}), "date": item["date"]}
+        id_url_pairs[id] = {"title": item["title"],"url": item["url"], "user": item.get("user", {}), "date": item["date"]}
     return id_url_pairs
 
 
@@ -48,3 +48,7 @@ def _insert_row(tree: ttk.Treeview, data: Dict, favdat: List[Dict] = []) -> Dict
 def load_fav() -> List[Dict]:
         favdat = json.load(open(PGMFILE + "/lib/data/usrfavorite.json"))
         return favdat
+
+def load_book() -> List[Dict]:
+    bookdat = json.load(open(PGMFILE + "/lib/data/bookmark.json"))
+    return bookdat
