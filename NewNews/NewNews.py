@@ -1,7 +1,7 @@
 #! /Users/kakeru/opt/anaconda3/bin/python3
 # NewNews.py - サーバからデータをダウンロードして表示する
 
-# TODO: お気に入り機能とブックマーク機能
+# TODO: ブックマーク機能
 # BUG: お気に入り機能とブックマーク機能が一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
 # TODO: サーバーと最新の情報を入手する
 # NOTE: 処理の状況を伝えるメッセージ
@@ -33,7 +33,7 @@ class WidgetsWindow():
         self.tree_dict: Dict[str, Tuple[ttk.Treeview, ttk.Scrollbar]] = {}      # ツリーをしまうようのリスト
         self.dat = {}       # データをしまうリスト
         self.pairs = {}     # リストの表示情報をしまうリスト
-        self.favdat = []
+        self.favdat = dataLoad.load_fav()         # お気に入りリストの読み込み
 
 
         # ボタンのセッティング
@@ -54,7 +54,7 @@ class WidgetsWindow():
         
 
 
-    def make_list(self, appname: str) -> None:
+    def make_list(self, appname: str, **kwd) -> None:
         """タブとツリーを作る"""
         # タブを作る
         tab = ttk.Frame(self.notebook)
@@ -81,8 +81,8 @@ class WidgetsWindow():
         tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # ローカルのデータを読み込む
-        dat, pairs = dataLoad.load_local_data(tree, appname)
+        # ローカルのデータを読み込む(メインの記事の時)
+        dat, pairs = dataLoad.load_local_data(tree, appname, favdat=self.favdat)
         
         # イベントを設定する
         tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
