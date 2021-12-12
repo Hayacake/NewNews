@@ -32,8 +32,10 @@ class WidgetsWindow():
         self.tree_dict: Dict[str, Tuple[ttk.Treeview, ttk.Scrollbar]] = {}      # ツリーをしまうようのリスト
         self.dat = {}       # データをしまうリスト
         self.pairs = {}     # リストの表示情報をしまうリスト
+        self.is_server: Dict[str, threading.Event] = {}
         self.favdat = dataLoad.load_fav()         # お気に入りリストの読み込み
         self.bookdat = dataLoad.load_book()       # ブックマークリストの読み込み
+        self.threads: Dict[str, Tuple[threading.Thread, threading.Thread]] = {}
 
 
         # ボタンのセッティング
@@ -52,7 +54,7 @@ class WidgetsWindow():
         # Qiitaのツリーを作る
         self.make_list("Qiita", self.favdat, self.bookdat)
         # bookmarkのツリーを作る
-        self.make_list("bookmark")
+        self.make_list("bookmark", server = False)
         
 
 
@@ -85,7 +87,14 @@ class WidgetsWindow():
 
         # ローカルのデータを読み込む(メインの記事の時)
         dat, pairs = dataLoad.load_local_data(tree, appname, favdat=favdat, bookdat=bookdat)
-        
+        # サーバーと最新のデータを読み込む(ブックマーク以外)
+        if kwd.get("server", True):
+            done_server = threading.Event()
+            th_server= threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, ), name="server")
+            th_server.start()
+            th_newest = threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, ), name="newest")
+            th_newest.start()
+
         # イベントを設定する
         tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
         tree.tag_bind("item", "<Return>", lambda event: eventFunc.open_url(event, tree, pairs))
@@ -96,6 +105,8 @@ class WidgetsWindow():
         self.tree_dict[appname] = (tree, scrollbar)     # ツリーをしまう
         self.dat[appname] = dat
         self.pairs[appname] = pairs
+        self.is_server[appname] = done_server
+        self.threads[appname] = (th_server, th_newest)
 
     
 

@@ -2,7 +2,7 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, logging, os, datetime
+import json, logging, os, datetime, threading, time
 from typing import Dict, List, Union
 
 PGMFILE = os.path.dirname(__file__)
@@ -20,6 +20,17 @@ def load_local_data(tree: ttk.Treeview, appname: str, favdat: List[Dict] = [], b
 
     logging.info(f"success load local data: {appname}")
     return dat, pairs
+
+
+def load_server_data(tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = []) -> Dict:
+    """サーバからデータをダウンロードする"""
+    logging.info(f"start loading server data: {appname}")
+
+    
+def load_server_data(tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = []) -> Dict:
+    """Webからデータをダウンロードする"""
+    logging.info(f"start loading newest data: {appname}")
+
 
 
 
