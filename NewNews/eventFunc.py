@@ -17,6 +17,9 @@ def open_url(event, tree: ttk.Treeview, pairs: Dict[str, Dict]) -> str:
             select = tree.identify_row(event.y)
         elif event.type == "2":
             select = tree.focus()
+        # 既読への切り替え
+        tgs = tree.item(select, "tags"); tgs = list(tgs)
+        if "unread" in tgs:
+            tgs.remove("unread"); tree.item(select, tags=tgs)
         url = pairs[select]["url"]
         webbrowser.open(url)
-        return url

@@ -10,14 +10,12 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, datetime, os, threading, logging, traceback
+import json, os, threading, logging
 from typing import Dict, List, Tuple, Union
 
 import dataLoad, eventFunc
-from Qiita import get_new_items
-from getDataFromServer import get_data_from_server
 
-logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] (%(threadName)s) %(levelname)s - %(message)s")
 
 PGMFILE = os.path.dirname(__file__)
 
@@ -55,6 +53,7 @@ class WidgetsWindow():
         self.make_list("Qiita", self.favdat, self.bookdat)
         # bookmarkのツリーを作る
         self.make_list("bookmark", server = False)
+
         
 
 
@@ -86,14 +85,16 @@ class WidgetsWindow():
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # ローカルのデータを読み込む(メインの記事の時)
-        dat, pairs = dataLoad.load_local_data(tree, appname, favdat=favdat, bookdat=bookdat)
+        dat, pairs, read_list = dataLoad.load_local_data(tree, appname, favdat=favdat, bookdat=bookdat)
         # サーバーと最新のデータを読み込む(ブックマーク以外)
         if kwd.get("server", True):
             done_server = threading.Event()
-            th_server= threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, ), name="server")
+            th_server= threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="server-" + appname)
             th_server.start()
-            th_newest = threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, ), name="newest")
+            th_newest = threading.Thread(target=dataLoad.load_newest_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="newest-" + appname)
             th_newest.start()
+            self.is_server[appname] = done_server
+            self.threads[appname] = (th_server, th_newest)
 
         # イベントを設定する
         tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
@@ -105,8 +106,6 @@ class WidgetsWindow():
         self.tree_dict[appname] = (tree, scrollbar)     # ツリーをしまう
         self.dat[appname] = dat
         self.pairs[appname] = pairs
-        self.is_server[appname] = done_server
-        self.threads[appname] = (th_server, th_newest)
 
     
 
@@ -150,7 +149,7 @@ class WidgetsWindow():
                 tgs.append("booked"); self.tree_dict[appname][0].item(select, tags=tgs)
         json.dump(self.bookdat, open(PGMFILE + "/lib/data/bookmark.json", "w"), indent=2, ensure_ascii=False)
         self.tree_dict["bookmark"][0].delete(*list(self.pairs["bookmark"].keys()))
-        self.dat["bookmark"], self.pairs["bookmark"] = dataLoad.load_local_data(self.tree_dict["bookmark"][0], "bookmark")
+        self.dat["bookmark"], self.pairs["bookmark"], _ = dataLoad.load_local_data(self.tree_dict["bookmark"][0], "bookmark")
 
 
 
