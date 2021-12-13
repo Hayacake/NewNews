@@ -2,7 +2,8 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, logging, os, datetime, threading, time
+import tkinter.messagebox
+import json, logging, os, datetime, threading, time, traceback
 from typing import Dict, List, Tuple, Union
 
 from getDataFromServer import get_data_from_server
@@ -27,20 +28,25 @@ def load_local_data(tree: ttk.Treeview, appname: str, favdat: List[Dict] = [], b
     return dat, pairs, read_list
 
 
-def load_server_data(tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Dict:
+def load_server_data(tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Tuple[List[Dict], Dict]:
     """サーバからデータをダウンロードする"""
     logging.info(f"start loading server data: {appname}")
-    time.sleep(5)
-    logging.debug("wait 5 sec!")
-    thevent.set()
+    # ファイルを読み込む
+    while True:
+        try:
+            dat = get_data_from_server()
+            pairs = _insert_row(tree, dat, favdat=favdat, bookdat=bookdat, read=read_list, appname=appname)
+            return dat, pairs
+        except Exception as err:
+            retry = tkinter.messagebox.askretrycancel(title="ERROR", message=traceback.format_exc())
+            if not retry:
+                break
 
     
-def load_newest_data(tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Dict:
+def load_newest_data(tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Tuple[List[Dict], Dict]:
     """Webからデータをダウンロードする"""
     logging.info(f"start loading newest data: {appname}")
-    logging.debug("wait another thread")
-    thevent.wait()
-    logging.debug("finish waiting")
+    return [{"test": 1}], {"Idkaj": "test"}
 
 
 

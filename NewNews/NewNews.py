@@ -2,15 +2,16 @@
 # NewNews.py - サーバからデータをダウンロードして表示する
 
 # BUG: お気に入り機能とブックマーク機能が一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能? / タグをうまいこと使えばいける気もする)
-# TODO: サーバーと最新の情報を入手する
+# TODO: サーバーと最新の情報を入手する(concurrentをうまいこと使う)
 # NOTE: 処理の状況を伝えるメッセージ
+# TODO: サーバーと最新の情報を入手する(情報源を指定できるように改造したい)
 # TODO: configファイルから読み込むアプリを決定する
 # TODO: リストの体裁を整える
 
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, os, threading, logging
+import json, os, threading, logging, concurrent.futures
 from typing import Dict, List, Tuple, Union
 
 import dataLoad, eventFunc
@@ -33,7 +34,7 @@ class WidgetsWindow():
         self.is_server: Dict[str, threading.Event] = {}
         self.favdat = dataLoad.load_fav()         # お気に入りリストの読み込み
         self.bookdat = dataLoad.load_book()       # ブックマークリストの読み込み
-        self.threads: Dict[str, Tuple[threading.Thread, threading.Thread]] = {}
+        self.threads: Dict[str, Tuple[threading.Thread, threading.Thread]] = {}     # スレッドを格納する
 
 
         # ボタンのセッティング
@@ -89,7 +90,8 @@ class WidgetsWindow():
         # サーバーと最新のデータを読み込む(ブックマーク以外)
         if kwd.get("server", True):
             done_server = threading.Event()
-            th_server= threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="server-" + appname)
+            pool = concurrent.futures.ThreadPoolExecutor(max_workers=6)
+            th_server = threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="server-" + appname)
             th_server.start()
             th_newest = threading.Thread(target=dataLoad.load_newest_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="newest-" + appname)
             th_newest.start()

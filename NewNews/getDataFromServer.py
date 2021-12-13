@@ -22,18 +22,18 @@ def get_data_from_server() -> List[Dict]:
 
         # サーバからデータを受信する
         fullData = b""
-        logging.info("start receiving")
+        logging.info("Success connection and start receiving")
 
         size = s.recv(BUFFER_SIZE).decode("utf-8")
         logging.info(size)
 
         while True:
             data = s.recv(BUFFER_SIZE)
-            logging.info("receive {} byte: {} ~ {}".format(len(data), data[:5], data[-5:]))
+            logging.debug("receive {} byte: {} ~ {}".format(len(data), data[:5], data[-5:]))
             fullData += data
             # 終了のチェック
             if len(fullData) == int(size):
-                logging.info("end of receiving: {} byte".format(len(fullData)))
+                logging.debug("end of receiving: {} byte".format(len(fullData)))
                 break
             logging.info("have received {} byte".format(len(fullData)))
         
