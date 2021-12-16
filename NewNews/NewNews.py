@@ -31,7 +31,6 @@ class WidgetsWindow():
         self.tree_dict: Dict[str, Tree.NewsTree] = {}      # ツリーをしまうようのリスト
         self.favdat = eventFunc.load_fav()         # お気に入りリストの読み込み
         self.bookdat = eventFunc.load_book()       # ブックマークリストの読み込み
-        self.threads: Dict[str, Tuple[threading.Thread, threading.Thread]] = {}     # スレッドを格納する
 
 
         # ボタンのセッティング
@@ -101,9 +100,8 @@ class WidgetsWindow():
         tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
         tree.tag_bind("item", "<Return>", lambda event: eventFunc.open_url(event, tree, pairs))"""
 
-        # 種々のデータを格納する
         # タブとツリーを格納する
-        self.tab_dict[appname] = tab                    # タブをしまう
+        self.tab_dict[appname] = tab      # タブをしまう
         self.tree_dict[appname] = tree    # ツリーをしまう
 
     
@@ -111,19 +109,19 @@ class WidgetsWindow():
     def fav_button_cmd(self, appname: str) -> None:
         """お気に入りボタン"""
         # BUG: 一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
-        select = self.tree_dict[appname][0].focus()
+        select = self.tree_dict[appname].tree.focus()
         if select == "":
             pass
         else:
-            select_value = self.tree_dict[appname][0].item(select, "values")
+            select_value = self.tree_dict[appname].tree.item(select, "values")
             if select_value[0].startswith("⭐️ "):
                 # すでにお気に入り登録されている時
-                self.tree_dict[appname][0].set(select, "Title", select_value[0][3:])
-                self.favdat.remove({"title": select_value[0][3:], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]})
+                self.tree_dict[appname].tree.set(select, "Title", select_value[0][3:])
+                self.favdat.remove({"title": select_value[0][3:], "tags": select_value[1].split(sep=", "), "user": self.tree_dict[appname].pairs[select]["user"], "url": self.tree_dict[appname].pairs[select]["url"], "date": self.tree_dict[appname].pairs[select]["date"]})
             else:
                 # お気に入り登録されていない時
-                self.tree_dict[appname][0].set(select, "Title", "⭐️ " + select_value[0])
-                self.favdat.append({"title": select_value[0], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]})
+                self.tree_dict[appname].tree.set(select, "Title", "⭐️ " + select_value[0])
+                self.favdat.append({"title": select_value[0], "tags": select_value[1].split(sep=", "), "user": self.tree_dict[appname].pairs[select]["user"], "url": self.tree_dict[appname].pairs[select]["url"], "date": self.tree_dict[appname].pairs[select]["date"]})
         json.dump(self.favdat, open(PGMFILE + "/lib/data/usrfavorite.json", "w"), indent=2, ensure_ascii=False)
     
 
@@ -131,24 +129,24 @@ class WidgetsWindow():
         """ブックマークボタン"""
         # BUG: 一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能?)
         list_book = [item["title"] for item in self.bookdat]
-        select = self.tree_dict[appname][0].focus()
+        select = self.tree_dict[appname].tree.focus()
         if select == "":
             pass
         else:
-            select_value = self.tree_dict[appname][0].item(select, "values")
-            tgs = self.tree_dict[appname][0].item(select, "tags"); tgs = list(tgs)      # タグを取得する
-            item_info = {"title": self.pairs[appname][select]["title"], "tags": select_value[1].split(sep=", "), "user": self.pairs[appname][select]["user"], "url": self.pairs[appname][select]["url"], "date": self.pairs[appname][select]["date"]}
-            if self.pairs[appname][select]["title"] in list_book:
+            select_value = self.tree_dict[appname].tree.item(select, "values")
+            tgs = self.tree_dict[appname].tree.item(select, "tags"); tgs = list(tgs)      # タグを取得する
+            item_info = {"title": self.tree_dict[appname].pairs[select]["title"], "tags": select_value[1].split(sep=", "), "user": self.tree_dict[appname].pairs[select]["user"], "url": self.tree_dict[appname].pairs[select]["url"], "date": self.tree_dict[appname].pairs[select]["date"]}
+            if self.tree_dict[appname].pairs[select]["title"] in list_book:
                 # すでにブックマークされている時
                 self.bookdat.remove(item_info)
-                tgs.remove("booked"); self.tree_dict[appname][0].item(select, tags=tgs)
+                tgs.remove("booked"); self.tree_dict[appname].tree.item(select, tags=tgs)
             else:
                 # ブックマークされていない時
                 self.bookdat.append(item_info)
-                tgs.append("booked"); self.tree_dict[appname][0].item(select, tags=tgs)
+                tgs.append("booked"); self.tree_dict[appname].tree.item(select, tags=tgs)
         json.dump(self.bookdat, open(PGMFILE + "/lib/data/bookmark.json", "w"), indent=2, ensure_ascii=False)
-        self.tree_dict["bookmark"][0].delete(*list(self.pairs["bookmark"].keys()))
-        self.dat["bookmark"], self.pairs["bookmark"], _ = Tree.load_local_data(self.tree_dict["bookmark"][0], "bookmark")
+        self.tree_dict["bookmark"].tree.delete(*list(self.tree_dict["bookmark"].pairs.keys()))
+        self.tree_dict["bookmark"].dat, self.tree_dict["bookmark"].pairs, _ = self.tree_dict["bookmark"].load_local_data(self.tree_dict["bookmark"].tree, "bookmark")
 
 
 
