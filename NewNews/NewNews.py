@@ -2,7 +2,7 @@
 # NewNews.py - サーバからデータをダウンロードして表示する
 
 # BUG: お気に入り機能とブックマーク機能が一つのタブにしか対応していない(タブが変更された時にボタンを更新するようにすれば解決可能? / タグをうまいこと使えばいける気もする)
-# TODO: サーバーと最新の情報を入手する(concurrentをうまいこと使う)
+# TODO: サーバーと最新の情報を入手する(concurrentをうまいこと使う / 新しいクラスをTree.pyに実装する)
 # NOTE: 処理の状況を伝えるメッセージ
 # TODO: サーバーと最新の情報を入手する(情報源を指定できるように改造したい)
 # TODO: configファイルから読み込むアプリを決定する
@@ -11,10 +11,10 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, os, threading, logging, concurrent.futures
+import json, os, threading, logging
 from typing import Dict, List, Tuple, Union
 
-import dataLoad, eventFunc
+import Tree, eventFunc
 
 logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] (%(threadName)s) %(levelname)s - %(message)s")
 
@@ -28,12 +28,9 @@ class WidgetsWindow():
 
         # 種々のリストのセッティング
         self.tab_dict: Dict[str, ttk.Frame] = {}                # タブをしまうようのリスト
-        self.tree_dict: Dict[str, Tuple[ttk.Treeview, ttk.Scrollbar]] = {}      # ツリーをしまうようのリスト
-        self.dat = {}       # データをしまうリスト
-        self.pairs = {}     # リストの表示情報をしまうリスト
-        self.is_server: Dict[str, threading.Event] = {}
-        self.favdat = dataLoad.load_fav()         # お気に入りリストの読み込み
-        self.bookdat = dataLoad.load_book()       # ブックマークリストの読み込み
+        self.tree_dict: Dict[str, Tree.NewsTree] = {}      # ツリーをしまうようのリスト
+        self.favdat = eventFunc.load_fav()         # お気に入りリストの読み込み
+        self.bookdat = eventFunc.load_book()       # ブックマークリストの読み込み
         self.threads: Dict[str, Tuple[threading.Thread, threading.Thread]] = {}     # スレッドを格納する
 
 
@@ -64,6 +61,8 @@ class WidgetsWindow():
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text=appname)
 
+        tree = Tree.NewsTree(tab, appname, favdat=favdat, bookdat=bookdat)
+        """ 移植済み
         # ツリーを作る
         tree = ttk.Treeview(tab, columns=('Title', 'Tags', 'Date'))
         # 列の設定
@@ -86,28 +85,26 @@ class WidgetsWindow():
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # ローカルのデータを読み込む(メインの記事の時)
-        dat, pairs, read_list = dataLoad.load_local_data(tree, appname, favdat=favdat, bookdat=bookdat)
+        dat, pairs, read_list = Tree.load_local_data(tree, appname, favdat=favdat, bookdat=bookdat)
         # サーバーと最新のデータを読み込む(ブックマーク以外)
         if kwd.get("server", True):
             done_server = threading.Event()
             pool = concurrent.futures.ThreadPoolExecutor(max_workers=6)
-            th_server = threading.Thread(target=dataLoad.load_server_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="server-" + appname)
+            th_server = threading.Thread(target=Tree.load_server_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="server-" + appname)
             th_server.start()
-            th_newest = threading.Thread(target=dataLoad.load_newest_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="newest-" + appname)
+            th_newest = threading.Thread(target=Tree.load_newest_data, args=(tree, appname, done_server, favdat, bookdat, read_list,), name="newest-" + appname)
             th_newest.start()
             self.is_server[appname] = done_server
             self.threads[appname] = (th_server, th_newest)
 
         # イベントを設定する
         tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, tree, pairs))
-        tree.tag_bind("item", "<Return>", lambda event: eventFunc.open_url(event, tree, pairs))
+        tree.tag_bind("item", "<Return>", lambda event: eventFunc.open_url(event, tree, pairs))"""
 
         # 種々のデータを格納する
         # タブとツリーを格納する
         self.tab_dict[appname] = tab                    # タブをしまう
-        self.tree_dict[appname] = (tree, scrollbar)     # ツリーをしまう
-        self.dat[appname] = dat
-        self.pairs[appname] = pairs
+        self.tree_dict[appname] = tree    # ツリーをしまう
 
     
 
@@ -151,7 +148,7 @@ class WidgetsWindow():
                 tgs.append("booked"); self.tree_dict[appname][0].item(select, tags=tgs)
         json.dump(self.bookdat, open(PGMFILE + "/lib/data/bookmark.json", "w"), indent=2, ensure_ascii=False)
         self.tree_dict["bookmark"][0].delete(*list(self.pairs["bookmark"].keys()))
-        self.dat["bookmark"], self.pairs["bookmark"], _ = dataLoad.load_local_data(self.tree_dict["bookmark"][0], "bookmark")
+        self.dat["bookmark"], self.pairs["bookmark"], _ = Tree.load_local_data(self.tree_dict["bookmark"][0], "bookmark")
 
 
 

@@ -2,7 +2,7 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import webbrowser, os
+import webbrowser, os, json
 
 from typing import Dict, List
 
@@ -23,3 +23,13 @@ def open_url(event, tree: ttk.Treeview, pairs: Dict[str, Dict]) -> str:
             tgs.remove("unread"); tree.item(select, tags=tgs)
         url = pairs[select]["url"]
         webbrowser.open(url)
+
+
+
+def load_fav() -> List[Dict]:
+        favdat = json.load(open(PGMFILE + "/lib/data/usrfavorite.json"))
+        return favdat
+
+def load_book() -> List[Dict]:
+    bookdat = json.load(open(PGMFILE + "/lib/data/bookmark.json"))
+    return bookdat
