@@ -11,7 +11,7 @@
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import json, os, threading, logging
+import json, os, logging
 from typing import Dict, List, Tuple, Union
 
 import Tree, eventFunc
@@ -60,7 +60,7 @@ class WidgetsWindow():
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text=appname)
 
-        tree = Tree.NewsTree(tab, appname, favdat=favdat, bookdat=bookdat)
+        tree = Tree.NewsTree(tab, appname, favdat=favdat, bookdat=bookdat, **kwd)
         """ 移植済み
         # ツリーを作る
         tree = ttk.Treeview(tab, columns=('Title', 'Tags', 'Date'))

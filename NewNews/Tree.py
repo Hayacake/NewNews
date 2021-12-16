@@ -15,9 +15,7 @@ PGMFILE = os.path.dirname(__file__)
 
 
 class NewsTree():
-    def __init__(self, tab: ttk.Frame, appname: str, favdat, bookdat) -> None:
-        self.appname = appname
-
+    def __init__(self, tab: ttk.Frame, appname: str, favdat, bookdat, **kwd) -> None:
         # ツリーを作る
         self.tree = ttk.Treeview(tab, columns=('Title', 'Tags', 'Date'))
         # 列の設定
@@ -39,13 +37,20 @@ class NewsTree():
         self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=0, pady=0)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        print(type(favdat))
         # ローカルのデータを読み込む(メインの記事の時)
         self.dat, self.pairs, self.read_list = self.load_local_data(self.tree, appname, favdat=favdat, bookdat=bookdat)
+        # サーバとwebから情報をロードする
+        if kwd.get("server", True):
+            self.thevent = (threading.Event(), threading.Event())          # サーバからのデータロードを待つ
+            # サーバからのロード
+            thread_server = threading.Thread(target=self.load_server_data, args=(self.tree, appname, favdat, bookdat, self.read_list, ))
+            thread_server.start()
+            print("dummy loading newest")
 
         # イベントを設定する
         self.tree.tag_bind("item", "<Double-ButtonPress>", lambda event:eventFunc.open_url(event, self.tree, self.pairs))
         self.tree.tag_bind("item", "<Return>", lambda event: eventFunc.open_url(event, self.tree, self.pairs))
+
 
 
 
@@ -64,22 +69,32 @@ class NewsTree():
         return dat, pairs, read_list
 
 
-    def load_server_data(self, tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Tuple[List[Dict], Dict]:
+    def load_server_data(self, tree: ttk.Treeview, appname: str, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Tuple[List[Dict], Dict]:
         """サーバからデータをダウンロードする"""
         logging.info(f"start loading server data: {appname}")
         # ファイルを読み込む
         while True:
             try:
                 dat = get_data_from_server()
-                pairs = eventFunc._insert_row(tree, dat, favdat=favdat, bookdat=bookdat, read=read_list, appname=appname)
-                return dat, pairs
+                if datetime.datetime.fromisoformat(self.dat[0]["date"]) >= datetime.datetime.fromisoformat(dat[0]["date"]):
+                    logging.debug("local data is newest")
+                    self.thevent[0].set(); self.thevent[1].set()
+                    break
+                else:
+                    logging.debug("update to server data")
+                    self.dat = dat
+                    self.thevent[0].set()           # データの更新を始める
+                    self.pairs = eventFunc._insert_row(tree, dat, favdat=favdat, bookdat=bookdat, read=read_list, appname=appname)
+                    self.thevent[1].set()           # テーブルの更新を始める
+                    break
             except Exception as err:
                 retry = tkinter.messagebox.askretrycancel(title="ERROR", message=traceback.format_exc())
                 if not retry:
+                    self.thevent[0].set(); self.thevent[1].set()
                     break
 
     
-    def load_newest_data(self, tree: ttk.Treeview, appname: str, thevent: threading.Event, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Tuple[List[Dict], Dict]:
+    def load_newest_data(self, tree: ttk.Treeview, appname: str, favdat: List[Dict] = [], bookdat: List[Dict] = [], read_list: List[str] = []) -> Tuple[List[Dict], Dict]:
         """Webからデータをダウンロードする"""
         logging.info(f"start loading newest data: {appname}")
         return [{"test": 1}], {"Idkaj": "test"}
